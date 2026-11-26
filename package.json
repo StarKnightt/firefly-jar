@@ -1,0 +1,20 @@
+{
+  "name": "firefly-jar",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5183",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 4183"
+  },
+  "dependencies": {
+    "@fontsource-variable/fraunces": "^5.3.0",
+    "@fontsource/caveat": "^5.3.0",
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "playwright": "^1.65.1",
+    "vite": "^8.3.8"
+  }
+}
