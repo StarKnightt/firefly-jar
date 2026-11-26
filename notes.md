@@ -404,3 +404,35 @@ fireflies before dark, bark at the oak's root flare.
 Checks after round 5: bot play-through passes (20 caught, 20 released, end card); real-input test
 passes on desktop and phone; touch ring test passes; 1920x1080 on the RTX 4060 with GPU-synced
 timing is 93 to 107 fps average, worst 1% 62 to 72 fps.
+
+## Before shipping
+
+- **Textures** recompressed once (`tools/optimize-assets.mjs`): 14.8 MB to 5.0 MB, normal maps kept
+  at full chroma. The built site is 9.1 MB.
+- **A stall in the ending** (one frame of about 47 ms when the stars began to join up) came from the
+  constellation's lines being hidden during the shader warm-up. They are now always drawn, at zero
+  opacity until needed, so the pipeline is compiled before play starts.
+- **Trailer.** `trailer.mp4` is 45.0 s, 1920x1080, 60 fps, H.264 (NVENC) with AAC stereo sound,
+  42 MB. Real gameplay recorded frame by frame: three catches at golden hour, three at dusk, three
+  at night, the lid coming off, the release and the constellation, with five text cards and hard
+  cuts (no fades). `thumbnail.png` is the opening view with the title.
+
+## Final measurements (production build, RTX 4060, 1920x1080, high tier, WebGPU)
+
+Timed with the GPU queue drained every frame, so each number is CPU plus GPU time for that frame
+with no pipelining. `node tools/perf.mjs --synced --built`.
+
+| Scene | Average | Worst 1% | p99 frame |
+| --- | --- | --- | --- |
+| Golden hour, empty jar | 97 to 104 fps | 73 to 78 fps | 12.4 to 13.4 ms |
+| Dusk, 10 in the jar | 97 to 100 fps | 66 to 74 fps | 12.7 to 14.5 ms |
+| Night, 19 in the jar | 98 to 101 fps | 60 to 67 fps | 12.6 to 14.6 ms |
+| Ending, release to stars | 98 to 108 fps | 67 to 73 fps (29 in one run, see below) | 12.9 to 14.1 ms |
+
+Ranges are across runs. Of the three runs of the ending after the warm-up fix, the first had a
+single long frame (245 ms, which made that run's worst 1% 29 fps); the next two had no frame over
+20 ms. It did not repeat, so I take it for something else on the machine, but it is noted here.
+
+Final checks on the build: bot play-through passes (20 caught, 20 released, end card); real
+keyboard, mouse and touch test passes on desktop and phone; touch ring test passes; no shader or
+page errors.

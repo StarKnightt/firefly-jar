@@ -18,10 +18,13 @@ A short trailer with sound is in [`trailer.mp4`](trailer.mp4).
   drag on the right to look, tap a firefly to catch it. Works in portrait and landscape.
 
 Each firefly makes the jar glow brighter, and brings night a little closer. After dark they are
-shy: run at one and it bolts, walk up and it lets you. The gate is open, so you can wander up the
+shy: run at one and it bolts, walk up, stop when the ring lights and it lets you. The gate is open, so you can wander up the
 path to the porch. When the jar holds twenty, you lift it and open the lid.
 
 It takes about five minutes. Sound on is better.
+
+Measured on an RTX 4060 at 1920x1080: about 100 fps on average, with the slowest 1% of frames
+still at 60 fps or better (details in `notes.md`).
 
 ## What is in it
 

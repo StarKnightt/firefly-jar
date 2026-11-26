@@ -119,7 +119,9 @@ export function createFireflies(game) {
   }
   const lines = new THREE.Mesh(lineGeo, lineMat);
   lines.frustumCulled = false;
-  lines.visible = false;
+  // Always drawn (at zero opacity until the ending) so its pipeline is compiled in the warm-up
+  // instead of stalling the frame the stars start to join up.
+  lines.visible = true;
   lines.renderOrder = 18;
   game.scene.add(lines);
 
@@ -195,7 +197,7 @@ export function createFireflies(game) {
       for (const j of jarFlies) { j.active = false; j.release = -1; j.left = false; hide(j.i); }
       for (const s of sparks) { s.life = 0; hide(s.i); }
       api.released = 0; api.releasing = false; api.spawnClock = 0; api.settled = 0;
-      lines.visible = false; lineOpacity.value = 0;
+      lineOpacity.value = 0;
       // The first few are right there in front of you as the evening opens; the rest are a walk away.
       for (let n = 0; n < 3; n++) spawn(wild[n], { near: true, gap: 3.2 });
       for (let n = 3; n < 6; n++) spawn(wild[n], n < 4 ? { ahead: true } : {});

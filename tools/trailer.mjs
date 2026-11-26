@@ -44,7 +44,7 @@ ff = spawn('ffmpeg', [
   '-hide_banner', '-loglevel', 'error', '-y',
   '-f', 'image2pipe', '-framerate', String(meta.fps), '-c:v', 'png', '-i', '-',
   // NVENC on the RTX 4060; libx264 here would be a silent CPU fallback.
-  '-c:v', 'h264_nvenc', '-preset', 'p7', '-tune', 'hq', '-rc', 'vbr', '-cq', '20', '-b:v', '9M', '-maxrate', '15M', '-bufsize', '30M',
+  '-c:v', 'h264_nvenc', '-preset', 'p7', '-tune', 'hq', '-rc', 'vbr', '-multipass', 'fullres', '-b:v', '8M', '-maxrate', '13M', '-bufsize', '26M',
   '-profile:v', 'high', '-pix_fmt', 'yuv420p', '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-color_range', 'tv',
   '-vf', 'scale=in_range=full:out_range=tv:out_color_matrix=bt709',
   '-r', String(meta.fps), videoTmp,
@@ -75,7 +75,7 @@ await fs.writeFile(wavTmp, Buffer.from(b64, 'base64'));
 await b.check();
 
 const mux = spawnSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-i', videoTmp, '-i', wavTmp,
-  '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-shortest', '-movflags', '+faststart', outFile], { stdio: 'inherit' });
+  '-c:v', 'copy', '-af', 'volume=3dB', '-c:a', 'aac', '-b:a', '192k', '-shortest', '-movflags', '+faststart', outFile], { stdio: 'inherit' });
 if (mux.status !== 0) await fail(new Error('mux failed'));
 const probe = spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'stream=codec_name,width,height,r_frame_rate,nb_frames,channels,sample_rate:format=duration,size,bit_rate', '-of', 'json', outFile]);
 console.log('[trailer]', probe.stdout.toString().replace(/\s+/g, ' '));

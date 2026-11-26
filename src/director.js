@@ -220,6 +220,14 @@ export function createDirector(game) {
     thumbnail() {
       api.prepare();
       for (let i = 0; i < 50; i++) { const { dt } = tick(i); game.step(dt); }
+      // The poster frame: a few already in the jar, and the nearest ones caught mid-flash.
+      game.debugState({ count: 5 });
+      stage({ x: START.x, z: START.z, yaw: START_YAW }, [
+        [3.2, -1.5, 1.2, 0], [4.4, 1.6, 1.45, 0], [5.8, -0.4, 1.55, 0], [7.2, 3.0, 1.2, 0],
+        [7.8, -3.4, 1.35, 0], [10.5, 1.0, 1.6, 0], [12.0, -5.2, 1.2, 0], [13.0, 4.8, 1.4, 0],
+      ]);
+      for (const f of targets) f.pulse = 1.1;
+      game.step(1 / 240);
       showCards(0, 0);
       cardEls[0].style.transform = 'none';
       document.getElementById('hud').style.display = 'none';

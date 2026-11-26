@@ -24,10 +24,11 @@ for (const file of await walk(root)) {
   if (!/\.jpe?g$/i.test(file)) continue;
   const size = (await fs.stat(file)).size;
   before += size;
-  // Normal maps keep more quality: compression blocks show up as lighting noise.
+  // Normal maps keep more quality and full-resolution chroma: their channels are directions, and
+  // compression blocks or chroma subsampling show up as lighting noise.
   const q = /nor_gl/i.test(file) ? '3' : '5';
   const tmp = file + '.tmp.jpg';
-  const r = spawnSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-i', file, '-q:v', q, '-pix_fmt', 'yuvj420p', tmp]);
+  const r = spawnSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-i', file, '-q:v', q, '-pix_fmt', /nor_gl/i.test(file) ? 'yuvj444p' : 'yuvj420p', tmp]);
   if (r.status !== 0) { console.error('failed', file, r.stderr.toString()); await fs.rm(tmp, { force: true }); after += size; continue; }
   const s2 = (await fs.stat(tmp)).size;
   if (s2 < size * 0.9) { await fs.rename(tmp, file); after += s2; } else { await fs.rm(tmp); after += size; }
