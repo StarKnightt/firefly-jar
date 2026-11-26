@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const SOFTWARE = /swiftshader|llvmpipe|software|basic render/i;
 
-export async function launch({ width = 1920, height = 1080, mobile = false, dpr = 1, built = false, url = null, allowSoftware = process.argv.includes('--allow-software'), extraArgs = [] } = {}) {
+export async function launch({ width = 1920, height = 1080, mobile = false, dpr = 1, built = false, url = null, strictAutoplay = false, allowSoftware = process.argv.includes('--allow-software'), extraArgs = [] } = {}) {
   let server = null, browser = null, closing = false;
 
   const teardown = async (code = 0, why) => {
@@ -42,7 +42,9 @@ export async function launch({ width = 1920, height = 1080, mobile = false, dpr 
     headless: true,
     args: [
       '--use-angle=d3d11', '--use-gl=angle', '--enable-gpu', '--enable-gpu-rasterization', '--ignore-gpu-blocklist',
-      '--force_high_performance_gpu', '--enable-unsafe-webgpu', '--autoplay-policy=no-user-gesture-required',
+      '--force_high_performance_gpu', '--enable-unsafe-webgpu',
+      // Phones only let sound start from a touch. strictAutoplay keeps that rule so the unlock is tested.
+      ...(strictAutoplay ? ['--autoplay-policy=user-gesture-required'] : ['--autoplay-policy=no-user-gesture-required']),
       '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows',
       ...extraArgs,
     ],

@@ -29,7 +29,8 @@ still at 60 fps or better (details in `notes.md`).
 ## What is in it
 
 - three.js on the WebGPU renderer with TSL shaders, and a WebGL2 fallback for phones without
-  WebGPU. Three quality tiers, picked automatically.
+  WebGPU. Three quality tiers, picked automatically. If a device cannot keep up, the game lowers its
+  render resolution by itself.
 - A whole evening driven by one number from golden hour to night: sun, sky, haze, light,
   exposure, crickets and the lights in the farmhouse all follow it.
 - About 260,000 tufts of grass placed in the vertex shader in rings around you, with wind gusts,

@@ -522,3 +522,30 @@ The two slow frames the four-scene test shows in its night scene do not appear w
 scene is measured on a freshly loaded page (`tools/perf-slow.mjs --scene night`: 0, 1 and 0 frames
 over 16.7 ms in three runs, the one at 16.9 ms). They come from that test jumping from dusk with
 10 in the jar straight to night with 19.
+
+## Phones: what could be checked without one, and a safety net
+
+No phone is attached to this PC and there is no Android emulator on it, so nothing here was run on
+phone hardware. What was done instead:
+
+- **A frame-rate governor** (`src/main.js`). If play stays under about 42 fps, the game tries
+  drawing 38% of the pixels for a moment. If the frame rate clearly rises, the GPU was the limit
+  and the lower resolution stays (a quarter of the pixels if it is still slow). If it does not
+  rise, something else is the limit (a battery saver capping the browser at 30 fps, a slow CPU)
+  and the resolution goes back. It decides once per session and never runs in the deterministic
+  captures. `tools/govtest.mjs` checks all three outcomes on the real page: left alone at 113 fps;
+  resolution lowered and kept when asked for more than the card can draw (113 to 155 fps at 62%
+  scale); tried and restored with the CPU slowed 20 times.
+- **Phone CPU** (`tools/phone-cpu.mjs`): the phone tier while walking, with Chrome slowing the
+  page's main thread. 4x slower: 151 fps average. 6x slower: 87 fps average, worst 1% 61 fps. This
+  does not slow the GPU, so it only says the CPU side has room.
+- **Phone GPU**: unmeasured. The phone tier costs about 5 ms a frame on the RTX 4060 at 1412x652,
+  and a phone GPU is many times slower, which is why the governor exists. How a given phone fares
+  is not known until someone opens the link on it.
+- **The paths a phone takes** (`tools/phonepaths.mjs`, 15 checks, all pass), with Chrome's rule
+  that sound may only start from a touch left on: WebGPU portrait, the WebGL2 fallback in portrait
+  and landscape. In each: a tap begins play, the sound starts from that tap, the stick walks, the
+  reach ring shows and a tap catches, and turning the phone on its side keeps the game playing.
+  No shader errors on the WebGL2 path.
+- A full phone-size play-through by the bot on the phone tier passes (20 caught, 20 released, end
+  card).

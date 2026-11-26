@@ -254,10 +254,37 @@ async function boot() {
   const frameTimes = new Float32Array(600);
   let ft = 0;
   game.frameTimes = frameTimes;
+  // ---- frame-rate governor ----
+  // For GPUs that cannot keep up (phones above all). If play stays under about 42 fps, try drawing
+  // 38% of the pixels for a moment. If that clearly helps, the GPU was the limit: keep the lower
+  // resolution (and go to a quarter of the pixels if it is still slow). If it does not help, the
+  // frame rate is capped by something else (a battery saver, a slow CPU): put the resolution back
+  // and leave it alone. It never runs in deterministic captures, and decides once per session.
+  const gov = { state: 'watch', floor: +(params.get('gov') || 42), t: 0, n: 0, skip: 1.5, before: 0, scale: 1, log: [] };
+  game.gov = gov;
+  const govSet = (scale) => { gov.scale = scale; game.dprScale = scale; resize(); };
+  function govern(ms) {
+    if (gov.state === 'done' || (game.phase !== 'play' && game.phase !== 'ending')) { gov.t = 0; gov.n = 0; return; }
+    if (ms > 250) return; // a stall or a hidden tab, not a slow GPU
+    if (gov.skip > 0) { gov.skip -= ms / 1000; return; }
+    gov.t += ms; gov.n++;
+    if (gov.t < 2500) return;
+    const fps = gov.n / (gov.t / 1000);
+    gov.t = 0; gov.n = 0; gov.skip = 0.5;
+    gov.log.push({ state: gov.state, scale: gov.scale, fps: +fps.toFixed(1) });
+    if (gov.state === 'watch') {
+      if (fps < gov.floor) { gov.before = fps; gov.state = 'probe'; govSet(0.62); }
+    } else if (gov.state === 'probe') {
+      if (fps > gov.before * 1.2) { if (fps < gov.floor) govSet(0.5); gov.state = 'done'; }
+      else { govSet(1); gov.state = 'done'; }
+      if (DEBUG) console.log('[gov]', JSON.stringify(gov.log), 'scale', gov.scale);
+    }
+  }
   function tick(now) {
     const raw = (now - last) / 1000;
     last = now;
     frameTimes[ft++ % frameTimes.length] = raw * 1000;
+    govern(raw * 1000);
     game.update(Math.min(raw, 0.05));
     game.render();
   }
