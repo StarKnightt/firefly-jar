@@ -67,13 +67,13 @@ const measure = async (name, seconds, setup) => {
     return {
       frames: times.length, avgFps: 1000 / (sum / times.length), p50: pct(0.5), p95: pct(0.95), p99: pct(0.99), max: times.at(-1),
       low1: 1000 / (worst.reduce((a, c) => a + c, 0) / worst.length),
-      over20ms: times.filter((t) => t > 20).length,
+      over20ms: times.filter((t) => t > 16.7).length,
       tris: info.render.triangles, calls: info.render.drawCalls ?? info.render.calls,
       size: [g.renderer.domElement.width, g.renderer.domElement.height],
     };
   }, { seconds, setup, synced });
   rows.push({ name, ...r });
-  console.log(`${name.padEnd(26)} avg ${r.avgFps.toFixed(1)} fps | 1% low ${r.low1.toFixed(1)} | p50 ${r.p50.toFixed(2)} ms | p95 ${r.p95.toFixed(2)} | p99 ${r.p99.toFixed(2)} | max ${r.max.toFixed(1)} | >20ms ${r.over20ms}/${r.frames} | ${r.size.join('x')} | tris ${r.tris} calls ${r.calls}`);
+  console.log(`${name.padEnd(26)} avg ${r.avgFps.toFixed(1)} fps | 1% low ${r.low1.toFixed(1)} | p50 ${r.p50.toFixed(2)} ms | p95 ${r.p95.toFixed(2)} | p99 ${r.p99.toFixed(2)} | max ${r.max.toFixed(1)} | over 16.7 ms ${r.over20ms}/${r.frames} | ${r.size.join('x')} | tris ${r.tris} calls ${r.calls}`);
 };
 
 for (const s of scenes) await measure(s.name, 8, s.kv);

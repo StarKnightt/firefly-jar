@@ -470,3 +470,38 @@ frame in the ending comes back.
 
 Worth knowing: the game is not frame-capped, so on a 200 Hz monitor it draws as fast as the card
 allows (about 100 fps at 1080p on the high tier) and keeps the GPU close to fully loaded.
+
+## The long frame in the ending: found, and it is not the game
+
+`tools/perf-ending.mjs` plays the whole ending (20th catch to the end card, about 1,610 frames) over
+and over and, for every frame over the 60 fps budget of 16.7 ms, records when it happened and how
+the time split between the page's own work and waiting for the GPU to finish.
+
+- **With other programs on the GPU** (the card was 28 to 37% busy before I started anything; the
+  desktop Chrome had been drawing the game minutes earlier): four of six runs had a frame over
+  33 ms, up to 265 ms. They fell at a different moment each run (1.5 s, 6.6 s, 16.2 s and 25 s into
+  the ending) and in every one the page's own work was 1 to 2 ms; the rest was waiting on the GPU.
+  A stall caused by the game would come at the same moment every time.
+- **With the GPU otherwise idle** (2 to 11% before and after): six of six runs had no frame over
+  33 ms. Average 115 to 119 fps, worst 1% 71 to 83 fps, p99 11.5 to 12.2 ms. Four runs had no frame
+  over 16.7 ms at all; the other two had one each (18.6 ms, and 25.4 ms on the frame the end card
+  appears).
+
+So the earlier 245 ms frame was the card being shared, not something in the ending.
+
+## Final frame rate, GPU otherwise idle
+
+`node tools/perf.mjs --synced --built`, twice, production build, 1920x1080, high tier, WebGPU,
+RTX 4060. (The slow-frame column in this tool was labelled over 20 ms but in this mode counted
+frames over 16.7 ms; the label is corrected. Earlier counts in these notes were therefore stricter
+than they said.)
+
+| Scene | Average | Worst 1% | p99 frame | Frames over 16.7 ms |
+| --- | --- | --- | --- | --- |
+| Golden hour, empty jar | 103 to 104 fps | 78 to 80 fps | 12.0 to 12.1 ms | 0 of 781, 0 of 788 |
+| Dusk, 10 in the jar | 101 fps | 78 to 81 fps | 12.1 to 12.4 ms | 0 of 773, 0 of 775 |
+| Night, 19 in the jar | 104 fps | 70 to 73 fps | 11.5 ms | 2 of 803 in both (23 and 27 ms at worst) |
+| Ending, release to stars | 117 fps | 81 to 82 fps | 11.0 to 11.5 ms | 1 of 1363, 1 of 1370 (19 ms) |
+
+The two slow frames in the night scene come back every run, so they are the game's or the test's
+(the test jumps straight to night with 19 in the jar); at 23 to 27 ms each I have left them.
