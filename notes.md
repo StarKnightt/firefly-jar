@@ -552,3 +552,9 @@ phone hardware. What was done instead:
 
 On the live link after this change: `tools/phonepaths.mjs --url` passes all 15 checks and
 `tools/livecheck.mjs --url` passes at 1920x1080, 844x390 and 390x844.
+
+## Physical phone
+
+Checked by the owner on their own phone on 2026-11-26, on the live link: it loaded, the stick and
+drag-to-look worked, a firefly was caught, and it felt smooth enough. (Reported by them; the phone
+model and frame rate were not recorded.)
