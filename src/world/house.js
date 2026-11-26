@@ -359,8 +359,8 @@ export function createHouse(assets) {
   const worldLamp = new THREE.Vector3();
   const update = (time, tod) => {
     const on = THREE.MathUtils.smoothstep(tod, 0.1, 0.32) * (1 + Math.sin(time * 9.0) * 0.008);
-    porchLight.intensity = on * 5;
-    pool.intensity = on * 22;
+    porchLight.intensity = on * 3.6;
+    pool.intensity = on * 12;
     // Someone just got up: the chair is still rocking, slower and slower, then again in a while.
     const cyc = (time % 46) / 46;
     chairPivot.rotation.x = Math.sin(time * 2.1) * 0.07 * Math.max(0, 1 - cyc * 2.2);

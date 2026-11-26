@@ -35,7 +35,9 @@ for (const v of views) {
   const playTo = (until, opts = {}) => page.evaluate(async ({ until, opts }) => {
     const g = window.__ffj, dt = 1 / 60;
     const wrap = (a) => { while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI) a += Math.PI * 2; return a; };
-    let target = null, guard = 0, t0 = g.time;
+    // A person takes ten seconds or more over each firefly; the bot waits so the evening it is
+    // photographed in is the evening a player would see.
+    let target = null, guard = 0, t0 = g.time, lastCatch = g.time - 6;
     while (g.phase === 'play' && g.count < until && guard++ < 60 * 60 * 8) {
       const p = g.player;
       const list = g.fireflies.wild.filter((f) => f.alive && f.state === 'idle');
@@ -48,9 +50,9 @@ for (const v of views) {
         const aimed = Math.abs(wrap(wantYaw - p.yaw)) < 0.04 && Math.abs(wantPitch - p.pitch) < 0.04;
         g.controls.autopilot = { x: 0, y: flat > g.fireflies.reach - 1.0 ? 1 : 0, run: false };
         if (opts.stopBeforeCatch && aimed && flat < g.fireflies.reach - 0.5 && g.count === until - 1) break;
-        if (aimed && flat < g.fireflies.reach - 0.5 && g.frame % 30 === 0) { if (g.flow.tryCatch(0, 0, false) === 'caught') target = null; }
+        if (aimed && flat < g.fireflies.reach - 0.5 && g.frame % 30 === 0 && g.time - lastCatch > (opts.pace ?? 11)) { if (g.flow.tryCatch(0, 0, false) === 'caught') { target = null; lastCatch = g.time; } }
       } else g.controls.autopilot = { x: 0, y: 0.6 };
-      g.step(dt);
+      if (guard % 4 === 0) g.step(dt); else g.update(dt);
     }
     g.controls.autopilot = null;
     return +(g.time - t0).toFixed(1);
