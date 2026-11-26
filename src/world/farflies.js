@@ -34,7 +34,7 @@ export function createFarFlies(count = 900) {
       const a = rnd() * Math.PI * 2, r = 70 + rnd() * 90;
       x = Math.cos(a) * r * 1.15; z = Math.sin(a) * r;
       if (x > FENCE.minX - 12 && x < FENCE.maxX + 12 && z > FENCE.minZ - 12 && z < FENCE.maxZ + 12) continue;
-      y = farHeight(x, z) + 1.0 + rnd() * 3.2;
+      y = farHeight(x, z) + 0.8 + rnd() * 5.5;
     }
     pos[n * 3] = x; pos[n * 3 + 1] = y; pos[n * 3 + 2] = z;
     par[n * 4] = rnd() * 100;           // phase
@@ -61,7 +61,7 @@ export function createFarFlies(count = 900) {
   const view = modelViewMatrix.mul(vec4(aPos.add(drift), 1.0));
   const dist = view.z.negate();
   // The first appear in the last of the sun; by blue hour they are all out.
-  const awake = smoothstep(aPar.z.mul(0.42), aPar.z.mul(0.42).add(0.1), U.tod.add(0.04)).mul(smoothstep(15.0, 22.0, dist));
+  const awake = smoothstep(aPar.z.mul(0.42), aPar.z.mul(0.42).add(0.1), U.tod.add(0.04)).mul(smoothstep(12.0, 18.0, dist));
   const day = float(1.0).sub(smoothstep(0.1, 0.5, U.tod));
   // A minimum apparent size keeps the far ones as points of light instead of vanishing.
   const size = max(float(0.07), dist.mul(0.0068)).mul(aPar.w);

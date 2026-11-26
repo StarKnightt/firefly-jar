@@ -163,7 +163,7 @@ function grassMaterial({ gridN, size, bladeHeight, innerHole, salt, wide, plume 
   const into = pow(saturate(dot(viewDir, U.sunDir).mul(0.5).add(0.5)), 3.0);
   const through = into.mul(U.trans).mul(smoothstep(0.1, 0.9, t)).mul(plume ? 1.7 : 1.7);
   // Lit from the front the low sun turns the field orange-gold; lit from behind the blades glow yellow-green.
-  const frontWarm = mix(vec3(1.0), vec3(1.22, 0.9, 0.5), U.trans.mul(float(1.0).sub(into)).mul(0.45));
+  const frontWarm = mix(vec3(1.0), vec3(1.25, 0.88, 0.46), U.trans.mul(float(1.0).sub(into)).mul(0.7));
   const lit = albedo.mul(frontWarm).mul(ao).mul(float(1.0).add(through)).add((plume ? vec3(1.0, 0.72, 0.3) : vec3(0.58, 0.74, 0.05)).mul(through).mul(plume ? 0.2 : 0.2));
 
   mat.colorNode = varying(lit, 'vGrassCol');
@@ -184,7 +184,7 @@ function grassMaterial({ gridN, size, bladeHeight, innerHole, salt, wide, plume 
   const jar = jarPool(worldPos).mul(warmAlbedo).mul(mix(0.1, 1.0, smoothstep(0.05, 0.9, t)))
     .mul(mix(0.3, 1.0, lee)).mul(plume ? 0.5 : 1.0)
     .add(flyLight(worldPos).mul(albedo).mul(smoothstep(0.2, 1.0, t)).mul(1.4))
-    .add(porchPool(worldPos).mul(albedo).mul(mix(0.25, 1.0, t)).mul(2.6));
+    .add(porchPool(worldPos).mul(albedo).mul(mix(0.25, 1.0, t)).mul(1.5));
   mat.emissiveNode = varying(jar, 'vGrassJar');
 
   return mat;

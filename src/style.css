@@ -111,7 +111,7 @@ button[disabled]:hover { transform: none; filter: none; }
   background: radial-gradient(circle, rgba(255, 244, 214, 0.05), rgba(255, 244, 214, 0.13)); box-shadow: 0 0 0 1.5px rgba(255, 244, 214, 0.36) inset; opacity: 0; transition: opacity 0.4s; }
 .touch-ui.playing #stick.active { opacity: 1; }
 .touch-ui.playing #stick.hinting { opacity: 0.85; animation: stickhint 1.6s ease-in-out infinite; }
-.portrait #stick { left: calc(84px + var(--safe-l)); top: calc(100% - 300px - var(--safe-b)); }
+.portrait #stick { left: calc(84px + var(--safe-l)); top: calc(100% - 215px - var(--safe-b)); }
 @keyframes stickhint { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.07); } }
 #stick i { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; margin: -26px 0 0 -26px; border-radius: 50%; background: rgba(255, 238, 196, 0.5); box-shadow: 0 2px 12px rgba(20, 10, 0, 0.35); }
 #stick.active { background: radial-gradient(circle, rgba(255, 244, 214, 0.08), rgba(255, 244, 214, 0.2)); }
@@ -161,10 +161,11 @@ button[disabled]:hover { transform: none; filter: none; }
 #ripple.go { animation: ripple 0.6s ease-out; }
 
 /* which way to the nearest firefly, when none is in view */
-#guide { position: absolute; top: 28%; height: 44%; width: 90px; opacity: 0; transition: opacity 0.9s ease; pointer-events: none; }
-#guide.left { left: 0; opacity: 1; background: radial-gradient(ellipse 100% 50% at 0% 50%, rgba(200, 255, 90, 0.5), rgba(200, 255, 90, 0.16) 45%, rgba(200, 255, 90, 0) 75%); animation: guide 1.8s ease-in-out infinite; }
-#guide.right { right: 0; opacity: 1; background: radial-gradient(ellipse 100% 50% at 100% 50%, rgba(200, 255, 90, 0.5), rgba(200, 255, 90, 0.16) 45%, rgba(200, 255, 90, 0) 75%); animation: guide 1.8s ease-in-out infinite; }
-@keyframes guide { 0%, 100% { filter: brightness(0.75); } 50% { filter: brightness(1.25); } }
+#guide { position: absolute; top: 50%; width: 22px; height: 22px; margin-top: -11px; border-radius: 50%; opacity: 0; transition: opacity 0.9s ease; pointer-events: none; }
+#guide.left, #guide.right { opacity: 1; background: radial-gradient(circle, rgba(232, 255, 150, 0.95), rgba(200, 255, 90, 0.5) 35%, rgba(200, 255, 90, 0) 70%); box-shadow: 0 0 22px 6px rgba(200, 255, 90, 0.35); animation: guide 1.5s ease-in-out infinite; }
+#guide.left { left: calc(14px + var(--safe-l)); }
+#guide.right { right: calc(14px + var(--safe-r)); }
+@keyframes guide { 0%, 100% { transform: scale(0.7); } 50% { transform: scale(1.15); } }
 
 /* thumbstick: an inner ring marks where walking ends and running begins */
 #stick b { position: absolute; inset: 9px; border-radius: 50%; box-shadow: 0 0 0 1px rgba(255, 244, 214, 0.3) inset; }
@@ -178,3 +179,10 @@ html:not(.playing) #mute { transition: opacity 0.6s; }
 .how, .phones, #title .sub { text-shadow: 0 1px 3px rgba(20, 8, 0, 0.9), 0 0 12px rgba(20, 8, 0, 0.8), 0 0 26px rgba(20, 8, 0, 0.5); }
 .portrait #end { padding-bottom: calc(28px + var(--safe-b)); background: linear-gradient(180deg, rgba(6, 10, 34, 0) 40%, rgba(6, 10, 34, 0.72)); }
 .portrait .credit { margin-top: 1.6em; }
+
+/* reach ring on touch, round the firefly itself */
+#ring { position: absolute; left: 0; top: 0; width: 60px; height: 60px; border-radius: 50%; opacity: 0; transition: opacity 0.2s ease; box-shadow: 0 0 0 2.5px rgba(255, 232, 150, 1), 0 0 16px rgba(255, 210, 110, 0.85), inset 0 0 10px rgba(255, 210, 110, 0.3); will-change: transform; }
+.playing #ring.on { opacity: 1; }
+#reticle.startled i { inset: 18px; background: rgba(255, 246, 220, 0.4); box-shadow: 0 0 0 1.5px rgba(30, 16, 0, 0.5); }
+#reticle.startled::after { content: 'startled'; position: absolute; top: 36px; left: 50%; transform: translateX(-50%); font-style: italic; font-size: 21px; opacity: 0.9; text-shadow: 0 1px 8px rgba(10, 6, 0, 0.95), 0 0 2px rgba(10, 6, 0, 0.8); white-space: nowrap; }
+@media (min-width: 1100px) { #end .sub { font-size: 24px; } .credit { font-size: 16px; } }

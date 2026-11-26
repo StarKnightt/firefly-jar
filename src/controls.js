@@ -33,7 +33,7 @@ export function createControls(game, { onCatch, onLockChange }) {
   const look = (dx, dy, sens) => {
     const p = game.player;
     p.yaw -= dx * sens;
-    p.pitch = THREE.MathUtils.clamp(p.pitch - dy * sens, -1.1, 1.48);
+    p.pitch = THREE.MathUtils.clamp(p.pitch - dy * sens, -0.92, 1.48);
   };
 
   // ---------- keyboard ----------
@@ -116,7 +116,7 @@ export function createControls(game, { onCatch, onLockChange }) {
     t.moved = Math.max(t.moved, Math.hypot(t.x - t.x0, t.y - t.y0));
     // A swipe across the screen turns you about the same amount whichever way the phone is held.
     // A swipe across the full width turns you about 200 degrees, whichever way the phone is held.
-    if (t.role === 'look') look(dx, dy, 3.5 / THREE.MathUtils.clamp(window.innerWidth, 360, 900));
+    if (t.role === 'look') look(dx, dy, 2.9 / THREE.MathUtils.clamp(window.innerWidth, 480, 900));
     else if (t.role === 'stick' && t.moved > 9) {
       if (!t.shown) { t.shown = true; setStick(t.x0, t.y0, true); }
       let sx = t.x - t.x0, sy = t.y - t.y0;

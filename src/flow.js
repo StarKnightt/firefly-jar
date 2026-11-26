@@ -81,7 +81,7 @@ export function createFlow(game) {
     fireflyAt(clientX, clientY) {
       if (game.phase !== 'play' || state.paused) return false;
       const hit = fireflies.pick((clientX / window.innerWidth) * 2 - 1, -((clientY / window.innerHeight) * 2 - 1), pickRadius(true));
-      return !!(hit && !hit.tooFar);
+      return !!(hit && !hit.tooFar && !hit.startled);
     },
 
     // A reach: at the crosshair, the cursor, or wherever the finger tapped.
@@ -90,15 +90,22 @@ export function createFlow(game) {
       const radius = pickRadius(touch);
       let hit = fireflies.pick(nx, ny, radius);
       const r = state.ringed;
-      if ((!hit || hit.tooFar) && !touch && r && game.time - r.t < 0.25 && r.f.alive && r.f.state === 'idle' && r.f.spook <= 0
+      if ((!hit || hit.tooFar || hit.startled) && !touch && r && game.time - r.t < 0.25 && r.f.alive && r.f.state === 'idle' && r.f.spook <= 0
         && r.f.pos.distanceTo(game.camera.position) < fireflies.reach * 1.12) hit = { f: r.f, tooFar: false };
       const sx = THREE.MathUtils.clamp(nx, -1, 1), sy = THREE.MathUtils.clamp(ny + 0.35, -1, 1);
-      if (hit && !hit.tooFar) {
+      if (hit && !hit.tooFar && !hit.startled) {
         fireflies.catch(hit.f);
         rig.scoop(sx, sy, true);
         snd('lid'); log({ type: 'lid' });
         state.sinceCatch = 0;
         return 'caught';
+      }
+      if (hit && hit.startled) {
+        // It is there, but it will not be caught until it settles.
+        ui.hint('it\u2019s startled. hold still a moment', 2.2, true);
+        rig.scoop(sx * 0.4, sy * 0.3, false);
+        snd('miss'); log({ type: 'miss' });
+        return 'startled';
       }
       if (hit && hit.tooFar) {
         // Right one, too far away: it flares to show which, and you are told why nothing happened.
@@ -111,16 +118,17 @@ export function createFlow(game) {
       }
       // A swipe at the air. If one was close to where you aimed, it flares and darts away.
       const near = fireflies.pick(nx, ny, radius, 3.2);
-      if (near) {
+      if (near && near.startled) { ui.hint('it\u2019s startled. hold still a moment', 2.2, true); }
+      else if (near) {
         fireflies.startle(near.f, near.tooFar ? 0.5 : 1);
         if (!near.tooFar && game.time - (state.nearMissAt ?? -99) > 5) { state.nearMissAt = game.time; ui.hint(touch ? 'just missed. tap right on the light' : 'just missed. put the dot right on it', 2.6, true); }
       }
       rig.scoop(sx, sy * 0.8, false);
       ui.ripple(nx, ny);
       state.emptyReaches = (state.emptyReaches || 0) + 1;
-      if (!near && game.time - (state.emptyAt ?? -99) > 6) {
+      if (!near && game.time - (state.emptyAt ?? -99) > 5) {
         state.emptyAt = game.time;
-        ui.hint(state.emptyReaches > 2 ? 'the ones past the fence are too far. look for a light low over the grass' : 'nothing in reach there. walk up to a light first', 3.2, true);
+        ui.hint('nothing in reach there. walk up to a light first', 2.4, true);
       }
       snd('miss'); log({ type: 'miss' });
       return 'miss';
@@ -138,7 +146,6 @@ export function createFlow(game) {
       if (n === 1) ui.hint('one. nineteen more to fill the jar', 4.5, true);
       else if (n === 5) ui.hint('the jar is starting to glow', 4, true);
       else if (n === 10) ui.hint('halfway. the light is going', 4, true);
-      else if (n === 13) ui.hint('they are shy in the dark. stop when the ring appears', 5.5, true);
       else if (n === 19) ui.hint('one more', 4, true);
       if (n >= game.goal) flow.startEnding();
     },
@@ -152,6 +159,7 @@ export function createFlow(game) {
       ui.playing(false);
       ui.reticle('');
       ui.guide(0);
+      ui.ring(0, 0, 0);
       const p = game.player;
       state.base.yaw = p.yaw; state.base.pitch = p.pitch;
       state.starYaw = p.yaw + wrap(clearSkyYaw(p.yaw) - p.yaw);
@@ -182,7 +190,7 @@ export function createFlow(game) {
       const p = game.player;
       for (const e of fireflies.events.splice(0)) {
         if (e.type === 'landed') flow.landed();
-        else if (e.type === 'spooked') { if (game.time - (state.spookAt ?? -99) > 7) { state.spookAt = game.time; ui.hint(e.how === 'close' ? 'too close. stop when the ring appears' : 'you startled it. no running after dark', 3.4, true); } }
+        else if (e.type === 'spooked') { if (game.time - (state.spookAt ?? -99) > 7) { state.spookAt = game.time; const touch = controls.state.touch; ui.hint(e.how === 'close' ? (touch ? 'too close. stop when the ring lights round it' : 'too close. stop when the ring appears') : (touch ? 'you startled it. ease off the stick after dark' : 'you startled it. no running after dark'), 3.4, true); } }
         else if (e.type === 'released') { snd('release', e.n); log({ type: 'release', n: e.n }); rig.setCount(Math.max(0, game.count - e.n), game.goal); }
       }
 
@@ -204,7 +212,8 @@ export function createFlow(game) {
         const tod = game.tod.value;
         if (!state.shown.porch && tod > 0.24) state.shown.porch = ui.hint('someone has put the porch light on', 4);
         if (!state.shown.star && tod > 0.5) state.shown.star = ui.hint('the first star is out', 4);
-        if (!state.shown.dark && tod > 0.8) state.shown.dark = ui.hint('it is dark now. the jar lights your way', 4.5);
+        if (!state.shown.shy && tod > 0.58) state.shown.shy = ui.hint(controls.state.touch ? 'they are shy in the dark. stop when the ring lights round one' : 'they are shy in the dark. stop when the ring appears', 6, true);
+        if (!state.shown.dark && tod > 0.85) state.shown.dark = ui.hint('it is dark now. the jar lights your way', 4.5);
         // Lost? After a few seconds with no firefly in view, a glow at the edge of the screen shows the way.
         {
           const cam = game.camera, v = new THREE.Vector3();
@@ -223,17 +232,31 @@ export function createFlow(game) {
             side = wrap(want - p.yaw) > 0 ? -1 : 1; // +yaw turns left
           }
           ui.guide(side);
+          if (side && !state.shown.guide) state.shown.guide = ui.hint('the glow at the edge points to the nearest firefly', 4.5);
         }
         if (game.count === 0 && state.sinceCatch > 30 && !state.shown.nudge) {
           state.shown.nudge = ui.hint(controls.state.touch ? 'walk right up to a little light, then tap it' : 'walk right up to a little light, put the dot on it, and click', 7);
         }
         // The crosshair is honest: a ring only when a click will catch.
+        if (controls.state.touch) {
+          let best = null, bd = Infinity;
+          for (const f of fireflies.wild) {
+            if (!f.alive || f.state !== 'idle' || f.spook > 0) continue;
+            const d = f.pos.distanceTo(game.camera.position);
+            if (d < fireflies.reach && d < bd) { bd = d; best = f; }
+          }
+          if (best) {
+            const v = best.pos.clone().project(game.camera);
+            if (v.z < 1 && Math.abs(v.x) < 1 && Math.abs(v.y) < 1) ui.ring((v.x * 0.5 + 0.5) * window.innerWidth, (-v.y * 0.5 + 0.5) * window.innerHeight, Math.max(26, pickRadius(true) * THREE.MathUtils.clamp(3.0 / bd, 0.7, 1.8) * 0.8));
+            else ui.ring(0, 0, 0);
+          } else ui.ring(0, 0, 0);
+        }
         if (controls.state.locked) {
           const rad = pickRadius(false);
           const hit = fireflies.pick(0, 0, rad);
-          if (hit && !hit.tooFar) state.ringed = { f: hit.f, t: game.time };
+          if (hit && !hit.tooFar && !hit.startled) state.ringed = { f: hit.f, t: game.time };
           // The ring is drawn at the real size of the catch area for that firefly.
-          ui.reticle(hit ? (hit.tooFar ? 'far' : 'near') : '', hit && !hit.tooFar ? rad * THREE.MathUtils.clamp(3.0 / hit.f.pos.distanceTo(game.camera.position), 0.7, 1.8) : 0);
+          ui.reticle(hit ? (hit.startled ? 'startled' : hit.tooFar ? 'far' : 'near') : '', hit && !hit.tooFar && !hit.startled ? rad * THREE.MathUtils.clamp(3.0 / hit.f.pos.distanceTo(game.camera.position), 0.7, 1.8) : 0);
         }
       } else if (game.phase === 'ending' || game.phase === 'done') {
         state.endT += dt;
@@ -251,7 +274,7 @@ export function createFlow(game) {
           // Where the jar of stars goes depends on the screen: above the end card on a monitor or an
           // upright phone, beside it on a phone held sideways.
           const aspect = window.innerWidth / window.innerHeight, short = window.innerHeight < 500;
-          const layout = aspect < 1 ? { y: 0.32, scale: 1.0 } : short ? { x: -0.5, y: 0.0, scale: 1.25 } : { y: 0.27, scale: 1.05 };
+          const layout = aspect < 1 ? { y: 0.32, scale: 1.0 } : short ? { x: -0.5, y: 0.0, scale: 1.25 } : { y: 0.3, scale: 1.3 };
           fireflies.releaseAll(state.starYaw, layout);
         }
         // Hands sink out of frame once the jar is empty, so the last thing on screen is the sky.

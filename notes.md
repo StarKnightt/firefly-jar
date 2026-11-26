@@ -342,3 +342,65 @@ bright and flat; round 4 said it had gone too dark. The fixes below are the ones
 Checks after round 4: bot play-through passes (a perfect-aim bot finishes at time of day 0.68);
 real-input test passes; 1920x1080 on the RTX 4060 with GPU-synced timing is 92 to 105 fps average,
 worst 1% 60 to 70 fps.
+
+## Round 5 (final): critic
+
+Three major problems and fifteen minor. Five rounds is the cap, so this was the last review; the
+fixes below went in afterwards and were not seen by a critic.
+
+- **Major 1.** On a phone the night hint said "stop when the ring appears", but the reach ring was
+  only ever drawn at the desktop crosshair. Nothing on touch said "close enough", and the firefly
+  in reach was a dim dot for 85% of the time after dark.
+- **Major 2.** A startled firefly kept the ring while refusing the click, and the reply was
+  "nothing in reach there" or the line about the fence. In portrait, 14 taps in a row on a startled
+  firefly were refused that way.
+- **Major 3.** The reaching arm was still a rigid striped cone joined to the hand at a right
+  angle, with a stub of forearm past the bracelet.
+- Minor: the porch and house up close (flat door, bare lamp, evenly lit facade and lawn at night);
+  running on the touch stick never explained; the jar only twice as bright as grass two metres
+  away; a flame-shaped glint in the empty jar; distant fireflies in one band along the treeline;
+  golden-hour grass more lime than gold; an ultramarine night sky; a fast player finishing before
+  night; no reaction from fireflies before dark; an unexplained green smear at the screen edge; a
+  small constellation on desktop with a still stretch; title text over the oak; two grey leg stubs
+  when looking straight down; fast look and a high stick on an upright phone; smeared bark at the
+  oak's root flare.
+
+Measured by the critic with real input: 5 to 10 seconds a catch for a scripted player, taps up to
+48 px off the light still catch, 107 to 149 fps at 1080p, ending 26 seconds on all three sizes,
+no page errors in nine sessions.
+
+## Round 5: fixes
+
+- **A ring on touch.** On a phone the ring is drawn round the firefly itself whenever one is in
+  reach (at least 52 px across), by day and after dark. The touch hints now say "stop when the
+  ring lights round one". `tools/ringtest.mjs` checks it: on in reach, off when too far, off when
+  startled.
+- **Something to tap after dark.** A firefly in reach holds a steady glow between flashes instead
+  of fading to a speck.
+- **Honest answers.** A startled firefly never shows the ring. Clicking or tapping one says "it's
+  startled. hold still a moment", and it settles three times faster if you do stand still. The
+  line about the fence is gone; "nothing in reach there" only answers a click on nothing.
+- **The arm.** The sleeve now starts at the wrist with its cuff over the joint (no stub of
+  forearm), runs out of frame, comes in from the lower right at an easy angle to the hand, and has
+  folds in its shading. The jar's light warms it without the long flat stripe.
+- **Hints tied to the dark.** "They are shy in the dark" now appears when it gets dark rather than
+  at a catch count. On touch a startle says "ease off the stick after dark", and the title line
+  says the stick walks gently and runs at the rim.
+- **The edge guide** is a small pulsing light inside the safe area instead of a tall smear, and is
+  named the first time it shows.
+- **Light.** The jar is brighter and its pool on the grass tighter and dimmer at the edge; the
+  porch lamp's pool on the lawn is 40% dimmer; siding sinks further into the dark at night; the
+  night sky is a darker blue-grey; grass facing the sun is warmer. The empty jar no longer carries
+  a reflection on its inner wall.
+- **Ending.** The constellation is a quarter larger on desktop and its lines draw in as the stars
+  arrive. End-card text is larger on wide screens.
+- Also: distant fireflies spread from the grass up into the trees; looking down stops before the
+  legs fill the view; look on an upright phone is about a third slower and the stick sits lower.
+
+Not done (minor, left as they are): a remodelled door and lantern for the porch, refraction in the
+jar glass, streaked firefly sprites and insect bodies, varied tree species, a reaction from
+fireflies before dark, bark at the oak's root flare.
+
+Checks after round 5: bot play-through passes (20 caught, 20 released, end card); real-input test
+passes on desktop and phone; touch ring test passes; 1920x1080 on the RTX 4060 with GPU-synced
+timing is 93 to 107 fps average, worst 1% 62 to 72 fps.

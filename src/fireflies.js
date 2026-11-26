@@ -217,14 +217,15 @@ export function createFireflies(game) {
     // Screen-space pick. Returns {f, tooFar} or null. `loose` widens it, to find what a miss was aimed at.
     pick(ndcX, ndcY, radiusPx, loose = 1) {
       const w = window.innerWidth, h = window.innerHeight;
-      let best = null, bestD = Infinity, far = null, farD = Infinity;
+      let best = null, bestD = Infinity, far = null, farD = Infinity, startled = null, startledD = Infinity;
       for (const f of wild) {
-        if (!f.alive || f.state !== 'idle' || f.spook > 0) continue;
+        if (!f.alive || f.state !== 'idle') continue;
         tmp.copy(f.pos).project(camera);
         if (tmp.z > 1 || tmp.z < -1) continue;
         const dx = (tmp.x - ndcX) * w * 0.5, dy = (tmp.y - ndcY) * h * 0.5;
         const d = Math.hypot(dx, dy);
         const dist3 = f.pos.distanceTo(camera.position);
+        if (f.spook > 0) { if (dist3 <= api.reach * 1.6 && d <= radiusPx * loose * 1.6 && (!startled || d < startledD)) { startled = f; startledD = d; } continue; }
         // Nearer fireflies are bigger targets.
         const rad = radiusPx * loose * THREE.MathUtils.clamp(3.0 / dist3, 0.7, 1.8);
         if (d > rad) continue;
@@ -233,6 +234,7 @@ export function createFireflies(game) {
       }
       if (best) return { f: best, tooFar: false };
       if (far) return { f: far, tooFar: true, dist: far.pos.distanceTo(camera.position) };
+      if (startled) return { f: startled, startled: true };
       return null;
     },
 
@@ -327,18 +329,18 @@ export function createFireflies(game) {
           tmp.x += (f.home.x - f.pos.x) * 0.1; tmp.z += (f.home.z - f.pos.z) * 0.1;
           // After dark they are shy: charge at one and it slips away, walk up and it lets you.
           const dx = f.pos.x - p.x, dz = f.pos.z - p.z, dp = Math.hypot(dx, dz);
-          if (f.spook > 0) f.spook -= dt;
+          if (f.spook > 0) f.spook -= dt * (f.spookHow === 'close' && game.player.speed < 0.25 ? 3 : 1);
           if (night > 0.05 && dp < 4.2 && dp > 0.01) {
             const shy = night * 0.5 * (1 - dp / 4.2);
             tmp.x += dx / dp * shy; tmp.z += dz / dp * shy;
           }
           // Run at one in the dark and it flares, bolts, and will not be caught for a few seconds.
           if (night > 0.3 && running && dp < 5.5 && f.spook <= 0 && playing) {
-            f.spook = 4.6;
+            f.spook = 4.6; f.spookHow = 'run';
             api.startle(f, 2.6);
             api.events.push({ type: 'spooked', how: 'run' });
           } else if (night > 0.55 && game.player.speed > 0.55 && dp < 1.9 && f.spook <= 0 && playing && game.phase === 'play') {
-            f.spook = 2.6;
+            f.spook = 2.6; f.spookHow = 'close';
             api.startle(f, 1.4);
             api.events.push({ type: 'spooked', how: 'close' });
           }
@@ -369,7 +371,8 @@ export function createFireflies(game) {
           f.pulse = Math.max(0, f.pulse - dt * 1.3);
           f.flash = flash;
           // By day a faint ember lets the eye follow one; at night they go properly dark between flashes.
-          const ember = THREE.MathUtils.lerp(0.2, 0.08, night);
+          const inReach = f.spook <= 0 && f.pos.distanceTo(camera.position) < api.reach;
+          const ember = Math.max(THREE.MathUtils.lerp(0.2, 0.08, night), inReach ? 0.34 : 0);
           f.glow = (ember + flash * (1 - ember)) * f.fade + f.pulse * 0.8;
           const day = 1 - THREE.MathUtils.smoothstep(tod, 0.1, 0.55);
           put(f.i, f.pos, 0.07 + flash * 0.03 + f.pulse * 0.05, f.glow * (2.0 + day * 1.6) * (f.spook > 0 ? 0.55 : 1), 0, 0, 1);
@@ -449,7 +452,7 @@ export function createFireflies(game) {
 
       // The jar drawn in the sky, once they have all arrived.
       if (lines.visible) {
-        const want = api.releasing && api.released > 0 && settled >= api.released && api.releaseClock > 12 ? 1 : 0;
+        const want = api.releasing && api.releaseClock > 11 ? Math.min(1, settled / 20) : 0;
         lineOpacity.value += (want * 0.55 - lineOpacity.value) * (1 - Math.exp(-dt * 0.9));
         JAR_LINES.forEach(([a, b], n) => {
           const A = jarFlies[a].world, B = jarFlies[b].world;

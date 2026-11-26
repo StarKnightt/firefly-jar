@@ -234,7 +234,7 @@ export function createHouse(assets) {
     // Rain splash and mildew climbing up from the ground.
     const splash = smoothstep(1.9, 0.55, y).mul(0.3);
     const col = mix(paint, vec3(0.38, 0.40, 0.29), splash).mul(float(1.0).sub(line.mul(0.5)));
-    return vec4(col.mul(mix(1.0, 0.42, smoothstep(0.5, 0.9, U.tod))), 1.0);
+    return vec4(col.mul(mix(1.0, 0.3, smoothstep(0.5, 0.9, U.tod))), 1.0);
   })();
   mats.siding = siding;
 

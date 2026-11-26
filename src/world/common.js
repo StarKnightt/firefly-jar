@@ -68,7 +68,7 @@ export const jarPool = /*@__PURE__*/ Fn(([worldPos]) => {
   const dv = worldPos.xz.sub(U.jarPos.xz);
   const d2 = dot(dv, dv);
   const atten = float(1.0).div(d2.mul(2.6).add(1.0)).mul(smoothstep(2.6, 0.9, length(dv)));
-  return U.jarCol.mul(U.jarInt).mul(atten).mul(0.25);
+  return U.jarCol.mul(U.jarInt).mul(atten).mul(0.18);
 });
 
 // Warm light of the jar. Not a scene light: it needs an artistic falloff so it can

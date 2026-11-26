@@ -53,7 +53,7 @@ export function createTerrain(tex) {
 
   mat.emissiveNode = Fn(() => {
     const albedo = vec3(0.2, 0.17, 0.085);
-    return albedo.mul(jarPool(positionWorld)).mul(0.6).add(porchPool(positionWorld).mul(vec3(0.2, 0.19, 0.11)).mul(1.5));
+    return albedo.mul(jarPool(positionWorld)).mul(0.6).add(porchPool(positionWorld).mul(vec3(0.2, 0.19, 0.11)).mul(0.9));
   })();
 
   const mesh = new THREE.Mesh(geo, mat);

@@ -18,9 +18,9 @@ const KEYS = [
   { t: 0.64, sunElev: -9.0, sunCol: C(0xff5a30), sunInt: 0.0, zenith: C(0x1b2a60), horizon: C(0x46508c), mid: C(0x2e3f7e), glow: C(0x9a5650), glowAmt: 0.32,
     hemiSky: C(0x6276c2), hemiGnd: C(0x2c3654), hemiInt: 0.52, fog: C(0x333f70), fogDen: 0.0048, stars: 0.5, moon: 0.4, exposure: 1.3, cloudLit: C(0x4a4a72), cloudDark: C(0x171c38), trans: 0.0 },
   // Night: dark, but a soft blue you can still see the meadow by.
-  { t: 0.82, sunElev: -14.0, sunCol: C(0xff5a30), sunInt: 0.0, zenith: C(0x10182f), horizon: C(0x2c3450), mid: C(0x1a2340), glow: C(0x3a3a60), glowAmt: 0.2,
+  { t: 0.82, sunElev: -14.0, sunCol: C(0xff5a30), sunInt: 0.0, zenith: C(0x111827), horizon: C(0x2b3044), mid: C(0x1a2134), glow: C(0x3a3a60), glowAmt: 0.2,
     hemiSky: C(0x7088c4), hemiGnd: C(0x1c2440), hemiInt: 0.30, fog: C(0x1c2646), fogDen: 0.0046, stars: 0.9, moon: 0.8, exposure: 1.2, cloudLit: C(0x263258), cloudDark: C(0x0e1430), trans: 0.0 },
-  { t: 1.00, sunElev: -18.0, sunCol: C(0xff5a30), sunInt: 0.0, zenith: C(0x0d1428), horizon: C(0x293048), mid: C(0x171f38), glow: C(0x2a2e52), glowAmt: 0.15,
+  { t: 1.00, sunElev: -18.0, sunCol: C(0xff5a30), sunInt: 0.0, zenith: C(0x0e131f), horizon: C(0x282c3c), mid: C(0x171c2c), glow: C(0x2a2e52), glowAmt: 0.15,
     hemiSky: C(0x748cc4), hemiGnd: C(0x1c2440), hemiInt: 0.27, fog: C(0x1a2340), fogDen: 0.0044, stars: 1.0, moon: 1.0, exposure: 1.18, cloudLit: C(0x222c54), cloudDark: C(0x0c1230), trans: 0.0 },
 ];
 

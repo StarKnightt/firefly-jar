@@ -7,7 +7,7 @@ import { heightAt, START, START_YAW } from './world/layout.js';
 import { renderOffline } from './audio.js';
 
 const FPS = 60;
-const DURATION = 44.0;
+const DURATION = 45.0;
 const CUT_DUSK = 13.55, CUT_NIGHT = 20.3; // on bar lines of the music (2.25 s bars from 0.05)
 
 const wrap = (a) => { while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI) a += Math.PI * 2; return a; };
@@ -18,6 +18,7 @@ export function createDirector(game) {
   const { fireflies, flow, controls } = game;
   const p = game.player;
   let shot = -1, targets = [], cooldown = 0, lastTodLog = -1, filmT = 0;
+  const lead = new THREE.Vector3();
 
   // ---- text cards ----
   const layer = document.createElement('div');
@@ -31,7 +32,7 @@ export function createDirector(game) {
     { a: 14.1, b: 17.6, y: 15, html: `<div style="font-size:96px;font-weight:600;${shadow}">every one makes the jar glow brighter</div>` },
     { a: 20.9, b: 24.3, y: 15, html: `<div style="font-size:96px;font-weight:600;${shadow}">playable on your phone</div>` },
     { a: 31.4, b: 35.0, y: 13, html: `<div style="font-size:96px;font-weight:600;${shadow}">fill the jar, then let them go</div>` },
-    { a: 39.6, b: 99, y: 64, html: `<div style="font-size:150px;line-height:.9;font-weight:600;${shadow}">Firefly Jar</div><div style="font:italic 380 36px 'Fraunces Variable',Georgia,serif;margin-top:18px;${shadow}">play it free in your browser</div><div style="font:500 30px 'Fraunces Variable',Georgia,serif;letter-spacing:.03em;margin-top:14px;opacity:.9;${shadow}">starknightt.github.io/firefly-jar</div>` },
+    { a: 40.4, b: 99, y: 66, html: `<div style="font-size:150px;line-height:.9;font-weight:600;${shadow}">Firefly Jar</div><div style="font:italic 380 36px 'Fraunces Variable',Georgia,serif;margin-top:18px;${shadow}">play it free in your browser</div><div style="font:500 30px 'Fraunces Variable',Georgia,serif;letter-spacing:.03em;margin-top:14px;opacity:.9;${shadow}">starknightt.github.io/firefly-jar</div>` },
   ];
   const cardEls = CARDS.map((c) => {
     const el = document.createElement('div');
@@ -59,7 +60,7 @@ export function createDirector(game) {
     spots.forEach(([d, side, h, phase], i) => {
       const f = fireflies.wild[i];
       const x = pose.x + fx * d + rx * side, z = pose.z + fz * d + rz * side;
-      f.alive = true; f.state = 'idle'; f.height = h; f.dart = 0; f.fade = 1; f.pulse = 0; f.spook = 0;
+      f.alive = true; f.state = 'idle'; f.height = h; f.dart = 0; f.fade = 1; f.pulse = 0; f.spook = 0; f.dip = false;
       f.pos.set(x, heightAt(x, z) + h, z); f.home.copy(f.pos); f.vel.set(0, 0, 0);
       f.period = 2.4 + (i % 4) * 0.4; f.clock = phase * f.period;
       targets.push(f);
@@ -78,16 +79,18 @@ export function createDirector(game) {
     return { err: Math.hypot(ey, ep), flat };
   };
   // Walk up to the next staged firefly and catch it, like a player would.
-  const chase = (dt, queue) => {
+  const chase = (dt, queue, gap = 1.3) => {
     cooldown -= dt;
     while (queue.length && (!queue[0].alive || queue[0].state !== 'idle')) queue.shift();
     const f = queue[0];
     if (!f) { controls.autopilot = { x: 0, y: 0 }; return; }
-    const a = aim(f.pos, dt);
+    // Lead it a little: after dark they drift faster than a lazy follow can track.
+    lead.copy(f.pos).addScaledVector(f.vel, 0.12);
+    const a = aim(lead, dt, 7.5, 2.4);
     const reach = fireflies.reach;
     controls.autopilot = { x: 0, y: a.flat > reach - 0.45 ? (a.err < 0.5 ? 1 : 0.4) : 0 };
-    if (a.err < 0.03 && a.flat < reach - 0.1 && cooldown <= 0) {
-      if (flow.tryCatch(0, 0, false) === 'caught') { queue.shift(); cooldown = 1.3; }
+    if (a.err < 0.034 && a.flat < reach - 0.1 && cooldown <= 0) {
+      if (flow.tryCatch(0, 0, false) === 'caught') { queue.shift(); cooldown = gap; }
     }
   };
 
@@ -102,7 +105,7 @@ export function createDirector(game) {
           [5.4, -0.8, 0.95, 0.02], [8.6, 1.7, 1.2, 0.62], [11.6, -1.6, 0.95, 0.3], [14.5, 0.8, 1.3, 0.86],
           [10.0, 5.2, 0.9, 0.45], [17.0, -5.5, 1.2, 0.12], [7.4, -4.4, 1.1, 0.74], [20.0, 3.5, 1.0, 0.55],
         ]);
-        this.queue = [targets[0], targets[1], targets[2], targets[3]];
+        this.queue = [targets[0], targets[1], targets[2]];
       },
       update(t, dt) {
         if (t < 4.5) {
@@ -110,7 +113,7 @@ export function createDirector(game) {
           controls.autopilot = { x: 0, y: t > 2.0 ? 0.4 : 0 };
           p.yaw = START_YAW + Math.sin(t * 0.5) * 0.012;
           p.pitch += (-0.03 - p.pitch) * dt * 0.8;
-        } else chase(dt, this.queue);
+        } else chase(dt, this.queue, 2.5);
       },
     },
     {
@@ -124,7 +127,7 @@ export function createDirector(game) {
         this.queue = [targets[0], targets[1], targets[2]];
         cooldown = 0.7;
       },
-      update(t, dt) { chase(dt, this.queue); },
+      update(t, dt) { chase(dt, this.queue, 1.7); },
     },
     {
       start: CUT_NIGHT,
@@ -133,14 +136,14 @@ export function createDirector(game) {
         const ps = { x: -12, z: -8.5, yaw: 0.36, pitch: -0.52 };
         game.debugState({ tod: 0.93, count: 17 });
         pose(ps.x, ps.z, ps.yaw, ps.pitch);
-        stage(ps, [[4.6, -0.4, 1.0, 0.85], [6.8, 1.1, 1.15, 0.4], [8.8, -0.6, 1.05, 0.65], [12, 4, 1.3, 0.1], [14, -4.5, 0.9, 0.5], [17, 1, 1.4, 0.3], [10, -6, 1.1, 0.7], [20, 5, 1.0, 0.9]]);
+        stage(ps, [[4.3, -0.3, 1.0, 0.85], [6.0, 0.9, 1.1, 0.4], [6.9, -0.2, 1.05, 0.65], [12, 4, 1.3, 0.1], [14, -4.5, 0.9, 0.5], [17, 1, 1.4, 0.3], [10, -6, 1.1, 0.7], [20, 5, 1.0, 0.9]]);
         this.queue = [targets[0], targets[1], targets[2]];
         cooldown = 0.4;
       },
       update(t, dt) {
         if (game.phase !== 'play') { controls.autopilot = { x: 0, y: 0 }; return; }
         // First look at the light the jar throws on your hands and the grass, then go after the last three.
-        if (t < 1.9) { controls.autopilot = { x: 0, y: 0.3 }; p.pitch += (-0.52 - p.pitch) * dt * 2; p.yaw += Math.sin(t * 1.2) * 0.0012; } else chase(dt, this.queue);
+        if (t < 1.9) { controls.autopilot = { x: 0, y: 0.3 }; p.pitch += (-0.52 - p.pitch) * dt * 2; p.yaw += Math.sin(t * 1.2) * 0.0012; } else chase(dt, this.queue, 0.95);
       },
     },
   ];
@@ -150,7 +153,7 @@ export function createDirector(game) {
   const warp = () => {
     if (game.phase !== 'ending' && game.phase !== 'done') return 1;
     const t = flow.state.endT;
-    return t < 4.5 ? 1.25 : t < 12.5 ? 1.55 : t < 23.5 ? 2.2 : 1;
+    return t < 4.5 ? 1.2 : t < 12.5 ? 1.5 : t < 23.5 ? 2.3 : 1;
   };
 
   const tick = (i) => {

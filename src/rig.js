@@ -3,7 +3,7 @@
 // and unscrews it at the end.
 import * as THREE from 'three/webgpu';
 import {
-  Fn, vec2, vec3, vec4, float, positionWorld, normalWorld, normalView, cameraPosition, normalize, dot, pow, mix, smoothstep, saturate,
+  Fn, vec2, vec3, vec4, float, positionWorld, normalWorld, normalView, normalViewGeometry, cameraPosition, normalize, dot, pow, mix, smoothstep, saturate,
   reflect, exp, abs, uv, sin, floor, fract, positionLocal, uniform, max, length, texture, atan, cameraProjectionMatrix, modelViewMatrix, positionGeometry,
 } from 'three/tsl';
 import { U } from './tod.js';
@@ -75,7 +75,7 @@ function glassMaterial(side, glowU, emboss, { inner = false } = {}) {
     const fres = pow(float(1.0).sub(nv), inner ? 3.4 : 2.4);
     const R = reflect(V.negate(), N);
     const env = skyReflect(R);
-    const spec = pow(saturate(dot(R, U.lightDir)), 240.0).mul(3.2).add(pow(saturate(dot(R, U.lightDir)), 26.0).mul(0.12));
+    const spec = inner || side === THREE.BackSide ? float(0.0) : pow(saturate(dot(R, U.lightDir)), 240.0).mul(2.4).add(pow(saturate(dot(R, U.lightDir)), 26.0).mul(0.08));
     const nvw = normalView;
     const body = smoothstep(0.012, 0.03, positionLocal.y).mul(smoothstep(0.125, 0.105, positionLocal.y));
     // Two soft window-like streaks down the body: the cue that says "glass".
@@ -286,12 +286,18 @@ export function createRig(game) {
   })();
   // Faded red and cream stripes, the same shirt you see when you look down.
   const sleeveMat = new THREE.MeshStandardNodeMaterial({ roughness: 0.95 });
+  sleeveMat.normalNode = Fn(() => {
+    // Folds as shading, not just as colour.
+    const f = sin(positionLocal.y.mul(95.0).add(sin(positionLocal.x.mul(70.0)).mul(1.8)));
+    return normalize(normalViewGeometry.add(vec3(0.0, f.mul(0.22), 0.0)));
+  })();
   sleeveMat.colorNode = Fn(() => {
     const stripe = smoothstep(0.44, 0.56, fract(positionLocal.y.mul(21.0)));
-    const fold = sin(positionLocal.y.mul(140.0).add(positionLocal.x.mul(60.0))).mul(0.05).add(0.95);
-    return vec4(mix(vec3(0.62, 0.13, 0.12), vec3(0.8, 0.76, 0.66), stripe).mul(fold), 1.0);
+    const fold = sin(positionLocal.y.mul(95.0).add(sin(positionLocal.x.mul(70.0)).mul(1.8))).mul(0.5).add(0.5);
+    const crease = mix(0.78, 1.0, smoothstep(0.1, 0.6, fold));
+    return vec4(mix(vec3(0.62, 0.13, 0.12), vec3(0.8, 0.76, 0.66), stripe).mul(crease), 1.0);
   })();
-  sleeveMat.emissiveNode = jarLight(positionWorld, normalWorld, float(0.2)).min(vec3(1.3)).mul(vec3(0.6, 0.4, 0.3)).mul(0.8);
+  sleeveMat.emissiveNode = jarLight(positionWorld, normalWorld, float(0.5)).min(vec3(0.7)).mul(vec3(0.6, 0.4, 0.3)).mul(0.3);
   const cuffMat = new THREE.MeshStandardNodeMaterial({ roughness: 0.95, color: 0x8f1f1c });
   cuffMat.emissiveNode = jarLight(positionWorld, normalWorld, float(0.2)).min(vec3(1.3)).mul(vec3(0.5, 0.12, 0.1)).mul(0.8);
   const hands = {};
@@ -309,15 +315,13 @@ export function createRig(game) {
 
     // Forearm running back out of frame.
     const fore = new THREE.Group();
-    const wristSkin = new THREE.Mesh(new THREE.CylinderGeometry(0.0176, 0.0196, 0.06, 18, 1, false), skin);
-    wristSkin.geometry.translate(0, -0.03, 0);
-    wristSkin.scale.set(1.0, 1, 0.8);
-    const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.0235, 0.037, 0.3, 22, 8, false), sleeveMat);
-    sleeve.geometry.translate(0, -0.045 - 0.15, 0);
+    // The sleeve starts right at the wrist, its cuff over the joint, and runs well out of frame.
+    const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.0228, 0.043, 0.52, 22, 14, false), sleeveMat);
+    sleeve.geometry.translate(0, -0.004 - 0.26, 0);
     sleeve.scale.set(1.0, 1, 0.84);
     const cuff = new THREE.Mesh(new THREE.TorusGeometry(0.0232, 0.0042, 8, 24), cuffMat);
-    cuff.rotation.x = Math.PI / 2; cuff.position.y = -0.046; cuff.scale.set(1, 0.84, 1);
-    fore.add(wristSkin, sleeve, cuff);
+    cuff.rotation.x = Math.PI / 2; cuff.position.y = -0.006; cuff.scale.set(1, 0.84, 1);
+    fore.add(sleeve, cuff);
     h.forearm = fore;
     hold.add(fore);
 
@@ -423,11 +427,11 @@ export function createRig(game) {
       const sx = side === 'L' ? -1 : 1;
       elbow.set(sx * THREE.MathUtils.lerp(0.21, 0.13, state.tall), THREE.MathUtils.lerp(-0.43, -0.52, state.tall) - state.elbowDrop, THREE.MathUtils.lerp(0.02, 0.1, state.tall));
       // Reaching for the lid the arm comes in level from the side, not up past the face.
-      if (side === 'R' && k > 0.001) elbow.lerp(dir.set(0.19 + state.carry * 0.1, -0.62, -0.41), k);
+      if (side === 'R' && k > 0.001) elbow.lerp(dir.set(0.4 + state.carry * 0.08, -0.4, -0.37), k);
       dir.copy(elbow).sub(tgt).normalize();
       h.forearm.position.copy(tgt).addScaledVector(dir, -0.012);
       h.forearm.quaternion.setFromUnitVectors(DOWN, dir);
-      h.band.position.copy(tgt).addScaledVector(dir, 0.012);
+      h.band.position.copy(tgt).addScaledVector(dir, -0.012);
       h.band.quaternion.setFromUnitVectors(Z, dir);
     }
   }
@@ -506,7 +510,7 @@ export function createRig(game) {
       const pulse = 1 + Math.sin(game.time * 2.1) * 0.05 + Math.sin(game.time * 3.7 + 1.0) * 0.035;
       const g = state.glow;
       // A fuller jar is brighter, and a dark evening makes the same jar look brighter still.
-      glowU.value = (Math.pow(g, 0.9) * 0.95 + state.flash * 0.3) * pulse;
+      glowU.value = (Math.pow(g, 0.9) * 1.12 + state.flash * 0.3) * pulse;
       U.jarInt.value = (Math.pow(g, 0.8) * 6.4 + state.flash * 1.0) * pulse * (game.jarBoost ?? 1);
 
       rig.updateMatrixWorld(true);

@@ -75,6 +75,15 @@ export function createUI(game, { onBegin, onResume, onAgain, onMute, fireflyAt, 
       const px = Math.round(ringPx);
       if (px && px !== el.reticle._px) { el.reticle._px = px; el.reticle.style.setProperty('--ring', px * 2 + 'px'); }
     },
+    // The reach ring on touch: drawn round the firefly itself when it is close enough to catch.
+    ring(x, y, r) {
+      const g = document.getElementById('ring');
+      if (!r) { if (g._on) { g._on = false; g.classList.remove('on'); } return; }
+      g.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+      const px = Math.round(r * 2);
+      if (px !== g._px) { g._px = px; g.style.width = g.style.height = px + 'px'; g.style.margin = `${-px / 2}px 0 0 ${-px / 2}px`; }
+      if (!g._on) { g._on = true; g.classList.add('on'); }
+    },
     // A soft glow at the left or right edge, pointing toward the nearest firefly when none is in view.
     guide(side) {
       const g = document.getElementById('guide');
