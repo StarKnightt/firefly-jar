@@ -1,8 +1,10 @@
 // Real input check: actual key presses, mouse moves, clicks and touches through the browser,
-// no test hooks driving the game. node tools/inputtest.mjs [--built]
+// no test hooks driving the game. node tools/inputtest.mjs [--built] [--url https://...]
 import { launch } from './lib/browser.mjs';
 
 const built = process.argv.includes('--built');
+const urlAt = process.argv.indexOf('--url');
+const url = urlAt >= 0 ? process.argv[urlAt + 1] : null; // test a deployed copy instead of a local server
 const snap = (page) => page.evaluate(() => {
   const g = window.__ffj;
   return { phase: g.phase, x: +g.player.pos.x.toFixed(2), z: +g.player.pos.z.toFixed(2), yaw: +g.player.yaw.toFixed(3), pitch: +g.player.pitch.toFixed(3), locked: g.controls.state.locked, count: g.count, touch: g.controls.state.touch };
@@ -12,7 +14,7 @@ const check = (name, ok, detail) => { results.push(ok); console.log(`${ok ? 'PAS
 
 // ---------- desktop ----------
 {
-  const b = await launch({ width: 1280, height: 720, built });
+  const b = await launch({ width: 1280, height: 720, built, url });
   await b.open('debug');
   const page = b.page;
   await page.waitForSelector('#begin:not([disabled])');
@@ -69,7 +71,7 @@ const check = (name, ok, detail) => { results.push(ok); console.log(`${ok ? 'PAS
 
 // ---------- phone ----------
 {
-  const b = await launch({ width: 844, height: 390, mobile: true, dpr: 2, built });
+  const b = await launch({ width: 844, height: 390, mobile: true, dpr: 2, built, url });
   await b.open('debug');
   const page = b.page;
   const cdp = await page.context().newCDPSession(page);

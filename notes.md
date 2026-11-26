@@ -436,3 +436,17 @@ single long frame (245 ms, which made that run's worst 1% 29 fps); the next two 
 Final checks on the build: bot play-through passes (20 caught, 20 released, end card); real
 keyboard, mouse and touch test passes on desktop and phone; touch ring test passes; no shader or
 page errors.
+
+## Shipped
+
+- Repository: https://github.com/StarKnightt/firefly-jar (public). GitHub Pages is built and deployed
+  by the Actions workflow in `.github/workflows/pages.yml`.
+- Live: https://starknightt.github.io/firefly-jar/
+- Checked on the live link with headless Chrome on the RTX 4060 (WebGPU, no page or shader errors):
+  `node tools/livecheck.mjs --url ...` starts the game with a real click or tap and finds it playing
+  at 1920x1080 (high tier), 844x390 and 390x844 (touch, low tier); `node tools/inputtest.mjs --url
+  ...` passes all eleven real-input checks there (begin, pointer lock, W, mouse look, strafe and a
+  click catch on desktop; tap to begin, stick, drag look while walking, stop and a tap catch on a
+  phone-sized touch screen).
+- Not checked: a physical phone. The phone results are from touch emulation at phone sizes on this
+  PC, so frame rate on real phone hardware is not measured.
