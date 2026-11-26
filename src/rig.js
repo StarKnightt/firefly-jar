@@ -362,6 +362,7 @@ export function createRig(game) {
   const wristOff = new THREE.Vector3(), tgt = new THREE.Vector3(), elbow = new THREE.Vector3(), dir = new THREE.Vector3();
   const gripQ = new THREE.Quaternion(), gripP = new THREE.Vector3(), lidQ = new THREE.Quaternion(), lidP = new THREE.Vector3(), jarQ = new THREE.Quaternion();
   const blendCurl = {}, blendSpread = {};
+  const handLidE = new THREE.Euler(), handLidQ = new THREE.Quaternion();
   const lerpCurls = (a, b, k) => {
     for (const f of Object.keys(FINGERS)) blendCurl[f] = a[f].map((v, i) => v + ((b[f][i] ?? v) - v) * k);
     for (const f of Object.keys(a === P.curl ? P.spread : a)) { /* spreads handled below */ }
@@ -405,8 +406,11 @@ export function createRig(game) {
         const l = P.lid;
         qb.setFromAxisAngle(Y, l.yaw); qc.setFromAxisAngle(X, l.pitch); qd.setFromAxisAngle(Z, l.roll);
         lidQ.copy(qb).multiply(qc).multiply(qd).multiply(qa);
-        lidQ.premultiply(jar.lid.quaternion).premultiply(jarQ);
-        lidP.set(l.x, l.y, l.z).applyQuaternion(jar.lid.quaternion).add(jar.lid.position).applyQuaternion(jarQ).add(jar.group.position);
+        // The wrist turns a little as it unscrews; the lid turns the rest of the way under the fingers.
+        handLidE.set(jar.lid.rotation.x, state.lidTwist * 0.22, jar.lid.rotation.z, 'YXZ');
+        handLidQ.setFromEuler(handLidE);
+        lidQ.premultiply(handLidQ).premultiply(jarQ);
+        lidP.set(l.x, l.y, l.z).applyQuaternion(handLidQ).add(jar.lid.position).applyQuaternion(jarQ).add(jar.group.position);
       }
       if (k > 0.001) { h.holder.quaternion.copy(gripQ).slerp(lidQ, k); tgt.copy(gripP).lerp(lidP, k); tgt.y += Math.sin(k * Math.PI) * 0.03; } else { h.holder.quaternion.copy(gripQ); tgt.copy(gripP); }
       h.holder.scale.setScalar(HAND_SCALE);
