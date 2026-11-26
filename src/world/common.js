@@ -59,16 +59,26 @@ export const patchNoise = /*@__PURE__*/ Fn(([p]) => {
 
 export const GRASS_ROOT = new THREE.Color(0x24401a);
 export const GRASS_LUSH = new THREE.Color(0x4c8a2a);
-export const GRASS_DRY = new THREE.Color(0x869040);
+export const GRASS_DRY = new THREE.Color(0x7d8a2e);
 export const GRASS_TIP = new THREE.Color(0xa9b862);
 
 // Warm light of the jar. Not a scene light: it needs an artistic falloff so it can
 // pool on the grass at arm's length without burning out the hands holding it.
+// A firefly flashing just above the grass lights the blade tips under it.
+export const flyLight = /*@__PURE__*/ Fn(([worldPos]) => {
+  let sum = float(0.0);
+  for (const L of U.flyLights) {
+    const dv = L.xyz.sub(worldPos);
+    sum = sum.add(L.w.div(dot(dv, dv).mul(3.2).add(1.0)).mul(smoothstep(2.4, 0.8, length(dv))));
+  }
+  return vec3(0.6, 1.0, 0.12).mul(sum);
+});
+
 export const jarLight = /*@__PURE__*/ Fn(([worldPos, worldNormal, wrap]) => {
   const L = U.jarPos.sub(worldPos);
   const d = length(L);
   const nl = saturate(dot(worldNormal, L.div(d.max(0.001))).mul(float(1.0).sub(wrap)).add(wrap));
-  const atten = exp(d.mul(-1.5)).mul(smoothstep(5.0, 2.0, d));
+  const atten = exp(d.mul(-2.2)).mul(smoothstep(4.2, 1.6, d));
   return U.jarCol.mul(U.jarInt).mul(atten).mul(nl);
 });
 

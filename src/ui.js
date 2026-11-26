@@ -59,7 +59,17 @@ export function createUI(game, { onBegin, onResume, onAgain, onMute, fireflyAt, 
       return true;
     },
     clearHint() { clearTimeout(hintTimer); el.hint.classList.remove('show'); hintUntil = 0; },
-    reticle(state) { if (el.reticle.className !== (state || '')) el.reticle.className = state || ''; },
+    reticle(state, ringPx = 0) {
+      if (el.reticle.className !== (state || '')) el.reticle.className = state || '';
+      const px = Math.round(ringPx);
+      if (px && px !== el.reticle._px) { el.reticle._px = px; el.reticle.style.setProperty('--ring', px * 2 + 'px'); }
+    },
+    // A reach that caught nothing: a soft ring where the hand went, so a miss is never silence.
+    ripple(nx, ny) {
+      const r = document.getElementById('ripple');
+      r.style.left = ((nx * 0.5 + 0.5) * 100) + '%'; r.style.top = ((-ny * 0.5 + 0.5) * 100) + '%';
+      r.classList.remove('go'); void r.offsetWidth; r.classList.add('go');
+    },
     // Show where the thumbstick lives for a few seconds; after that it only appears under a thumb.
     stickHint() { const s = document.getElementById('stick'); s.classList.add('hinting'); setTimeout(() => s.classList.remove('hinting'), 7000); },
   };

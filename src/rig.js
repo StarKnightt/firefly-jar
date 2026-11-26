@@ -4,7 +4,7 @@
 import * as THREE from 'three/webgpu';
 import {
   Fn, vec2, vec3, vec4, float, positionWorld, normalWorld, normalView, cameraPosition, normalize, dot, pow, mix, smoothstep, saturate,
-  reflect, exp, abs, uv, sin, floor, fract, positionLocal, uniform, max, length, texture, atan,
+  reflect, exp, abs, uv, sin, floor, fract, positionLocal, uniform, max, length, texture, atan, cameraProjectionMatrix, modelViewMatrix, positionGeometry,
 } from 'three/tsl';
 import { U } from './tod.js';
 import { hazeColor } from './world/sky.js';
@@ -87,13 +87,15 @@ function glassMaterial(side, glowU, emboss, { inner = false } = {}) {
     const ang = atan(positionLocal.x, positionLocal.z);
     const euv = vec2(ang.div(1.9).add(0.5), positionLocal.y.sub(0.038).div(0.062));
     const inBox = smoothstep(0.0, 0.02, euv.x).mul(smoothstep(1.0, 0.98, euv.x)).mul(smoothstep(0.0, 0.03, euv.y)).mul(smoothstep(1.0, 0.97, euv.y));
-    const letters = inner ? float(0.0) : texture(emboss, euv).r.mul(inBox);
+    const slope = inner ? float(0.0) : texture(emboss, euv.add(vec2(0.006, 0.012))).r.sub(texture(emboss, euv.sub(vec2(0.006, 0.012))).r).mul(inBox);
+    const letters = saturate(slope.mul(2.2));
+    const lettersShade = saturate(slope.mul(-2.2));
     // The glass itself glows from the light inside, most at the edges and the thick parts.
-    const innerGlow = U.jarCol.mul(glowU).mul(fres.mul(1.5).add(0.2).add(thick.mul(1.3)).add(letters.mul(0.9)));
+    const innerGlow = U.jarCol.mul(glowU).mul(fres.mul(1.3).add(0.05).add(thick.mul(1.5)).add(letters.mul(0.8)));
     const tint = vec3(0.78, 0.93, 0.9);
     const col = env.mul(tint).mul(fres.mul(1.0).add(0.07).add(thick.mul(0.3)).add(letters.mul(0.32)))
       .add(U.lightCol.mul(spec)).add(skyLum.mul(streak).mul(0.55)).add(skyLum.mul(letters).mul(0.25)).add(innerGlow);
-    const alpha = saturate(fres.mul(0.85).add(inner ? 0.03 : 0.08).add(streak.mul(0.24)).add(spec.mul(0.6)).add(thick.mul(0.28)).add(letters.mul(0.22)));
+    const alpha = saturate(fres.mul(0.85).add(inner ? 0.03 : 0.08).add(streak.mul(0.24)).add(spec.mul(0.6)).add(thick.mul(0.28)).add(letters.mul(0.3)).add(lettersShade.mul(0.3)));
     return vec4(col, alpha);
   })();
   return mat;
@@ -115,15 +117,16 @@ function buildJar(glowU) {
 
   // The light in the jar as a soft volume, so the jar is a lantern and not glass with dots in it.
   const glowMat = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
+  // A soft haze of light with no edge to it; the points of light are the insects themselves.
+  glowMat.vertexNode = cameraProjectionMatrix.mul(modelViewMatrix.mul(vec4(0.0, 0.0, 0.0, 1.0)).add(vec4(positionGeometry.xy.mul(vec2(0.07, 0.1)), 0.0, 0.0)));
   glowMat.colorNode = Fn(() => {
-    const V = normalize(cameraPosition.sub(positionWorld));
-    const core = pow(saturate(abs(dot(normalWorld, V))), 1.6);
-    return vec4(U.jarCol.mul(glowU).mul(core).mul(1.05), 1.0);
+    const r2 = positionGeometry.xy.dot(positionGeometry.xy);
+    return vec4(U.jarCol.mul(glowU).mul(exp(r2.mul(-3.6))).mul(0.3), 1.0);
   })();
-  const glow = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), glowMat);
-  glow.scale.set(0.04, 0.058, 0.04);
-  glow.position.y = 0.066;
+  const glow = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), glowMat);
+  glow.position.y = 0.062;
   glow.renderOrder = 15;
+  glow.frustumCulled = false;
   group.add(glow);
 
   // Two-piece zinc lid: a screw band with rolled threads and a flat disc, air holes punched with a nail.
@@ -249,10 +252,13 @@ function skinMaterial(glowU) {
     const Ld = L.div(d.max(0.001));
     const nl = dot(normalWorld, Ld);
     const atten = float(1.0).div(d.mul(d).mul(70.0).add(1.0));
-    const lit = saturate(nl.mul(0.85).add(0.15)).mul(atten);
-    const through = saturate(nl.negate().mul(0.8).add(0.3)).mul(float(1.0).div(d.mul(d).mul(260.0).add(1.0))).mul(0.34);
+    const lit = saturate(nl.mul(0.96).add(0.04)).mul(atten);
+    const through = saturate(nl.negate().mul(0.8).add(0.3)).mul(float(1.0).div(d.mul(d).mul(260.0).add(1.0))).mul(0.2);
+    // The low sun rims the hands, as it does everything else in the meadow.
+    const V = normalize(cameraPosition.sub(positionWorld));
+    const rim = pow(float(1.0).sub(saturate(dot(normalWorld, V))), 3.0).mul(saturate(dot(normalWorld, U.sunDir).mul(0.6).add(0.4))).mul(U.trans).mul(0.5);
     const skin = vec3(0.86, 0.55, 0.40);
-    return skin.mul(U.jarCol).mul(lit).mul(glowU).mul(2.3).add(vec3(1.0, 0.16, 0.05).mul(through).mul(glowU));
+    return skin.mul(U.jarCol).mul(lit).mul(glowU).mul(2.0).add(vec3(1.0, 0.16, 0.05).mul(through).mul(glowU)).add(U.sunCol.mul(rim));
   })();
   return mat;
 }
@@ -360,7 +366,7 @@ export function createRig(game) {
 
     // The lid: sits on the jar, rises with the hand for a catch, and at the end is carried off to the side.
     const c = state.carry;
-    jar.lid.position.set(c * 0.2, LID_Y + state.lidLift * 0.034 + Math.sin(Math.min(1, c * 1.4) * Math.PI) * 0.05 - c * c * 0.34, c * 0.05 - state.lidLift * 0.006);
+    jar.lid.position.set(c * 0.17, LID_Y + state.lidLift * 0.034 + Math.sin(Math.min(1, c * 2.2) * Math.PI) * 0.018 - c * c * 0.42, c * 0.06 - state.lidLift * 0.006);
     jar.lid.rotation.set(-state.lidLift * 0.5 - c * 0.5, state.lidTwist, c * 0.9, 'YXZ');
     jar.lid.visible = c < 0.97;
 
@@ -394,7 +400,7 @@ export function createRig(game) {
       const sx = side === 'L' ? -1 : 1;
       elbow.set(sx * THREE.MathUtils.lerp(0.21, 0.13, state.tall), THREE.MathUtils.lerp(-0.43, -0.52, state.tall) - state.elbowDrop, THREE.MathUtils.lerp(0.02, 0.1, state.tall));
       // Reaching for the lid the arm comes in level from the side, not up past the face.
-      if (side === 'R' && k > 0.001) elbow.lerp(dir.set(0.33 + state.carry * 0.22, -0.34 - state.carry * 0.25, -0.16), k);
+      if (side === 'R' && k > 0.001) elbow.lerp(dir.set(0.115 + state.carry * 0.2, -0.6, -0.33 + state.carry * 0.1), k);
       dir.copy(elbow).sub(tgt).normalize();
       h.forearm.position.copy(tgt).addScaledVector(dir, -0.012);
       h.forearm.quaternion.setFromUnitVectors(DOWN, dir);
@@ -438,9 +444,9 @@ export function createRig(game) {
       if (state.catchT >= 0) {
         state.catchT += dt;
         const t = state.catchT;
-        state.handK = Math.max(span(t, 0.0, 0.2) * (1 - span(t, 0.92, 1.2)), 0);
-        state.lidLift = span(t, 0.16, 0.36) * (1 - span(t, 0.7, 0.9));
-        if (t > 1.22) { state.catchT = -1; state.handK = 0; state.lidLift = 0; }
+        state.handK = Math.max(span(t, 0.0, 0.15) * (1 - span(t, 0.84, 1.02)), 0);
+        state.lidLift = span(t, 0.1, 0.26) * (1 - span(t, 0.68, 0.82));
+        if (t > 1.04) { state.catchT = -1; state.handK = 0; state.lidLift = 0; }
       }
       // The ending: the same hand unscrews the lid and takes it away.
       if (state.open) {
@@ -477,8 +483,8 @@ export function createRig(game) {
       const pulse = 1 + Math.sin(game.time * 2.1) * 0.05 + Math.sin(game.time * 3.7 + 1.0) * 0.035;
       const g = state.glow;
       // A fuller jar is brighter, and a dark evening makes the same jar look brighter still.
-      glowU.value = (Math.pow(g, 0.75) * 1.25 + state.flash * 0.4) * pulse;
-      U.jarInt.value = (Math.pow(g, 0.8) * 6.5 + state.flash * 1.2) * pulse * (game.jarBoost ?? 1);
+      glowU.value = (Math.pow(g, 0.85) * 1.2 + state.flash * 0.35) * pulse;
+      U.jarInt.value = (Math.pow(g, 0.8) * 5.6 + state.flash * 1.0) * pulse * (game.jarBoost ?? 1);
 
       rig.updateMatrixWorld(true);
       api.centerWorld(jarWorld);

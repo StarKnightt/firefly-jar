@@ -1,7 +1,22 @@
 // Input: WASD + mouse look on desktop, a floating thumbstick + drag to look on touch.
 // Both produce the same three things: a move vector, look deltas, and catch attempts.
 import * as THREE from 'three/webgpu';
-import { FENCE, GATE, HOUSE, heightAt } from './world/layout.js';
+import { FENCE, GATE, HOUSE, HOUSE_YAW, heightAt } from './world/layout.js';
+
+// The porch, in the farmhouse's own coordinates (it is turned a little): boards from BACK to FRONT,
+// three steps down to FOOT, a rail all round except at the steps.
+const PORCH = { half: 4.2, step: 0.78, back: 4.05, front: 5.82, foot: 7.3, height: 0.56 };
+const hc = Math.cos(HOUSE_YAW), hs = Math.sin(HOUSE_YAW);
+const toHouse = (x, z) => [(x - HOUSE.x) * hc - (z - HOUSE.z) * hs, (x - HOUSE.x) * hs + (z - HOUSE.z) * hc];
+const fromHouse = (lx, lz) => [HOUSE.x + lx * hc + lz * hs, HOUSE.z - lx * hs + lz * hc];
+// Height of what you are standing on: meadow, steps or porch boards.
+export function groundAt(x, z) {
+  const base = heightAt(x, z);
+  const [lx, lz] = toHouse(x, z);
+  if (Math.abs(lx) > PORCH.half + 0.4 || lz > PORCH.foot || lz < 3.4) return base;
+  const top = heightAt(HOUSE.x, HOUSE.z) + PORCH.height;
+  return base + (top - base) * THREE.MathUtils.clamp((PORCH.foot - 0.25 - lz) / 1.2, 0, 1);
+}
 
 const WALK = 2.15, RUN = 3.4; // metres per second for short legs
 
@@ -18,7 +33,7 @@ export function createControls(game, { onCatch, onLockChange }) {
   const look = (dx, dy, sens) => {
     const p = game.player;
     p.yaw -= dx * sens;
-    p.pitch = THREE.MathUtils.clamp(p.pitch - dy * sens, -1.15, 1.2);
+    p.pitch = THREE.MathUtils.clamp(p.pitch - dy * sens, -1.3, 1.48);
   };
 
   // ---------- keyboard ----------
@@ -129,7 +144,7 @@ export function createControls(game, { onCatch, onLockChange }) {
 
   const vel = new THREE.Vector3(), wish = new THREE.Vector3();
   const api = {
-    state, requestLock, keys, colliders: [], side: 'meadow',
+    state, requestLock, keys, colliders: [], side: 'meadow', onPorch: false, groundAt,
     autopilot: null, // { x, y, run } set by the trailer director
     enable(on) { state.enabled = on; if (!on) { keys.clear(); touches.clear(); stickId = lookId = null; setStick(0, 0, false); } },
     exitLock() { if (document.pointerLockElement) document.exitPointerLock(); },
@@ -144,7 +159,7 @@ export function createControls(game, { onCatch, onLockChange }) {
         if (keys.has('KeyA') || keys.has('ArrowLeft')) move.x -= 1;
         run = keys.has('ShiftLeft') || keys.has('ShiftRight');
         const st = stickId !== null ? touches.get(stickId) : null;
-        if (st && st.vx !== undefined) { move.x += st.vx; move.y += st.vy; }
+        if (st && st.vx !== undefined) { move.x += st.vx; move.y += st.vy; run = Math.hypot(st.vx, st.vy) > 0.94; }
       }
       if (api.autopilot) { move.set(api.autopilot.x, api.autopilot.y); run = !!api.autopilot.run; }
       const len = move.length();
@@ -167,7 +182,21 @@ export function createControls(game, { onCatch, onLockChange }) {
       else p.pos.x = THREE.MathUtils.clamp(p.pos.x, GATE.x - half, GATE.x + half);
       if (api.side === 'yard' && p.pos.z < fz - m) {
         p.pos.x = THREE.MathUtils.clamp(p.pos.x, HOUSE.x - 13, HOUSE.x + 15);
-        p.pos.z = Math.max(p.pos.z, HOUSE.z + 7.7);
+        // Up the steps and onto the porch.
+        let [lx, lz] = toHouse(p.pos.x, p.pos.z);
+        if (lz < PORCH.foot) {
+          if (api.onPorch) {
+            if (lz > PORCH.front && Math.abs(lx) > PORCH.step) lz = PORCH.front;       // the rail
+            if (lz <= PORCH.front) lx = THREE.MathUtils.clamp(lx, -PORCH.half, PORCH.half);
+            lz = Math.max(lz, PORCH.back);                                            // the wall
+            // The rocking chair.
+            const cx = lx + 2.9, cz = lz - 4.65, cd = Math.hypot(cx, cz);
+            if (cd < 0.62 && cd > 0.001) { lx = -2.9 + cx / cd * 0.62; lz = 4.65 + cz / cd * 0.62; }
+          } else if (Math.abs(lx) > PORCH.step) lz = PORCH.foot;                        // the porch skirt
+          else if (lz < PORCH.front) api.onPorch = true;
+          if (lz > PORCH.front && lz < PORCH.foot) lx = THREE.MathUtils.clamp(lx, -PORCH.step, PORCH.step);
+          [p.pos.x, p.pos.z] = fromHouse(lx, lz);
+        } else api.onPorch = false;
       } else {
         p.pos.x = THREE.MathUtils.clamp(p.pos.x, FENCE.minX + m, FENCE.maxX - m);
         p.pos.z = Math.min(p.pos.z, FENCE.maxZ - m);
@@ -176,7 +205,8 @@ export function createControls(game, { onCatch, onLockChange }) {
         const dx = p.pos.x - c.x, dz = p.pos.z - c.z, d = Math.hypot(dx, dz), r = c.r + 0.3;
         if (d < r && d > 0.0001) { p.pos.x = c.x + dx / d * r; p.pos.z = c.z + dz / d * r; }
       }
-      p.pos.y = heightAt(p.pos.x, p.pos.z);
+      if (api.side !== 'yard') api.onPorch = false;
+      p.pos.y = groundAt(p.pos.x, p.pos.z);
       const v = Math.hypot(vel.x, vel.z);
       p.speed += (Math.min(1.6, v / WALK) - p.speed) * (1 - Math.exp(-dt * 8));
       const prevBob = p.bob;

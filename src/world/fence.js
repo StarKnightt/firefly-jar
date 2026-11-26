@@ -23,7 +23,7 @@ function boardMaterial(tex, { along = 'x' } = {}) {
   mat.colorNode = vec4(c.mul(2.1).mul(grey).add(vec3(0.03, 0.035, 0.02).mul(r)), 1.0);
   mat.roughnessNode = texture(tex.rough, st).r.mul(0.5).add(0.5);
   // Lit by the jar the wood keeps its grain rather than turning into a glowing slab.
-  mat.emissiveNode = jarLight(positionWorld, normalWorld, float(0.3)).min(vec3(0.9)).mul(c.mul(2.1).mul(grey)).mul(0.8);
+  mat.emissiveNode = jarLight(positionWorld, normalWorld, float(0.3)).min(vec3(0.5)).mul(c.mul(2.1).mul(grey)).mul(0.8);
   return mat;
 }
 
@@ -232,7 +232,7 @@ export function createTown() {
   const mat = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
   const aOff = attribute('aOffset', 'vec3'), aPar = attribute('aParam', 'vec3');
   const view = modelViewMatrix.mul(vec4(aOff, 1.0));
-  mat.vertexNode = cameraProjectionMatrix.mul(view.add(vec4(positionGeometry.xy.mul(aPar.z).mul(1.5), 0.0, 0.0)));
+  mat.vertexNode = cameraProjectionMatrix.mul(view.add(vec4(positionGeometry.xy.mul(aPar.z).mul(1.0), 0.0, 0.0)));
   mat.colorNode = Fn(() => {
     const d = positionGeometry.xy.length();
     const g = smoothstep(1.0, 0.0, d);
@@ -241,7 +241,7 @@ export function createTown() {
     const col = mix(warm, vec3(1.0, 0.1, 0.06), smoothstep(-0.5, -0.9, aPar.x));
     const blink = mix(float(1.0), sin(time.mul(2.4)).mul(0.5).add(0.5), smoothstep(-0.5, -0.9, aPar.x));
     const haze = smoothstep(0.0, 0.35, U.tod).mul(0.5).add(0.5);
-    return vec4(col.mul(g.mul(g)).mul(lit).mul(blink).mul(2.6).mul(haze), 1.0);
+    return vec4(col.mul(g.mul(g).mul(g)).mul(lit).mul(blink).mul(1.5).mul(haze), 1.0);
   })();
   const glow = new THREE.Mesh(geo, mat);
   glow.frustumCulled = false;

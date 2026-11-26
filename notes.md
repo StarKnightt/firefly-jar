@@ -139,3 +139,72 @@ Found while testing the fixes:
 Checks after round 1: bot play-through passes (20 caught, 20 released, end card); real-input test
 passes on desktop and phone; 1920x1080 on the RTX 4060 with GPU-synced timing is 108 to 117 fps
 average, worst 1% 68 to 78 fps.
+
+## Round 2: critic
+
+A fresh critic played two full desktop evenings with real input, a desktop walk-around, and four
+phone sessions (both orientations), and measured the screenshots against the references.
+13 major problems, 8 minor. What it measured:
+
+- A whole evening now took 2 min 45 s on desktop and about 3 min 30 s on a phone, but night was
+  still no harder: late catches were as quick as early ones, and sprinting at fireflies in the
+  dark was the fastest way to play, against the hint on screen.
+- The unlit night field had gone too far the other way: luma 5 to 7 against 18 in the night
+  reference, a black void around an orange spotlight. The brief asks for a soft blue night.
+- Golden-hour grass was still about twice as bright as the references (mean 129 against 64 to 90)
+  with far less contrast (5th percentile 64 against 7).
+- The 380 to 900 distant fireflies were effectively invisible (sub-pixel), and the opening view
+  showed no catchable firefly at all.
+- 2 of 51 in-reach clicks with the ring showing did nothing; misses still gave no visible feedback.
+- Also major: the arm reaching for the lid read as a long flat slab across a quarter of the frame;
+  the jar's inner glow read as an egg inside a cream slab; the porch could not be stepped onto;
+  the end card covered the constellation on phones; a blown-out porch lamp and a bare door; no
+  continuous treeline; a royal-blue zenith and no blue hour; mannequin hands.
+
+## Round 2: fixes
+
+- **A soft blue night.** Night ambient and moonlight raised and cooled so unlit grass sits at
+  luma 16 (target 15 to 25), with a blue-violet blue hour held between sunset and night and the
+  warm colour only along the horizon. Golden-hour zenith desaturated to a pale blue; rounder
+  clouds lit from below.
+- **Grass contrast.** Less direct sun on the field, darker roots, a yellow-green transmission tint
+  only when looking into the light and an orange-gold cast when lit from the front, blades about
+  a third narrower with more per tuft, longer overlaps between the distance rings. Golden-hour
+  grass now measures mean 76, 5th percentile 45. Trees were added to the west so long shadows
+  cross the middle of the meadow.
+- **Fireflies you can see.** Every catchable firefly keeps a minimum size on screen (larger on a
+  phone), yellow at the heart and yellow-green at the edge, and the nearest four light the grass
+  tips under them. The distant ones are four times larger. Three catchable ones now open the
+  evening 5 to 9 m in front of you.
+- **A treeline.** Three unbroken bands of hedgerow and scrub beyond the fence give the fireflies a
+  dark wall to show against.
+- **Pacing by the clock.** Time of day now runs mainly on time (about seven minutes from golden
+  hour to night if you only watch), with each catch nudging it. After dark there are fewer
+  catchable fireflies and they appear farther away.
+- **Night is harder, and running has a cost.** Run at a firefly in the dark and it flares, bolts
+  about six metres and cannot be caught for three seconds, with a line of text saying why. On a
+  phone a full push of the stick now runs, so the hint applies there too.
+- **Honest ring, visible misses.** A firefly that had the ring is still caught if it drifts out
+  in the instant of the click. The ring is drawn at the real size of the catch area. Any reach
+  that catches nothing shows a soft ripple where the hand went and makes the nearest firefly flare.
+- **The arm.** The right arm now comes up from below the frame, so only the wrist and hand show;
+  the gesture is quicker.
+- **The jar.** The glow volume is gone; in its place a soft edgeless haze, brighter points with
+  halos (some sitting on the glass), light gathered at the rim and the thick base, and lettering
+  that catches light on one side and shades on the other. Fingers in front of the glow go dark,
+  with red at their edges.
+- **The porch.** The steps and the porch boards are walkable, with the rail, the wall and the
+  rocking chair solid. The door has panels, a knob and a screen door standing ajar; there is a
+  mat and two pots of geraniums. The lamp is a small bulb; a second light with a gentle falloff
+  throws a warm pool about ten metres out onto the lawn, with the posts and rails casting shadows
+  across it. Window panes hold the evening sky until the lamps come on.
+- **The ending.** The turn to open sky allows for the whole frame, not just its centre. Rising
+  fireflies are larger and trail sparks. The constellation is drawn with lines of real width and
+  is placed for the screen: above the end card on a monitor or an upright phone, beside it on a
+  phone held sideways.
+- Also: the sun rims the hands; you can look almost straight up; the counter waits for the title
+  to fade; larger hint text on a dark plate; small lines of text mark the porch light coming on,
+  the first star and full dark.
+
+Checks after round 2: bot play-through passes; real-input test passes on desktop and phone;
+1920x1080 on the RTX 4060 with GPU-synced timing is 94 to 112 fps average, worst 1% 68 to 77 fps.

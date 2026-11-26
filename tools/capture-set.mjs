@@ -80,9 +80,12 @@ for (const v of views) {
   await steps(40);
   await shot('08-farmhouse', 300);
   // Through the open gate and up the path to the porch steps.
-  await page.evaluate(async () => { const g = window.__ffj; await g.debugState({ x: -22.6, z: -34.2, yaw: 0.2, pitch: 0.12 }); });
+  await page.evaluate(async () => { const g = window.__ffj; await g.debugState({ x: -23.79, z: -35.3, yaw: 0.16, pitch: 0.1 }); });
   await steps(40);
   await shot('08b-at-the-porch-steps', 300);
+  await page.evaluate(async () => { const g = window.__ffj; await g.debugState({ x: -24.22, z: -38.16, yaw: 0.9, pitch: 0.0 }); });
+  await steps(40);
+  await shot('08c-on-the-porch', 300);
   await page.evaluate(async () => { const g = window.__ffj; await g.debugState({ x: -19, z: -19, yaw: 0.25, pitch: 0.03 }); });
   await steps(10);
   await page.evaluate(async () => { const g = window.__ffj; await g.debugState({ pitch: -0.62 }); });
@@ -98,6 +101,11 @@ for (const v of views) {
   await page.evaluate(async () => { const g = window.__ffj; await g.debugState({ x: -19, z: -20, yaw: 0.25, pitch: 0.04 }); });
   await steps(40);
   await shot('12-porch-at-night', 300);
+  await page.evaluate(async () => { const g = window.__ffj; await g.debugState({ x: -24.22, z: -38.3, yaw: 3.3, pitch: -0.05 }); });
+  await steps(40);
+  await shot('12b-meadow-from-the-porch-at-night', 300);
+  await page.evaluate(async () => { const g = window.__ffj; await g.debugState({ x: -19, z: -20, yaw: 0.25, pitch: 0.04 }); });
+  await steps(10);
   await page.evaluate(async () => { const g = window.__ffj; await g.debugState({ pitch: -0.55 }); });
   await steps(30);
   await shot('13-jar-light-on-grass', 300);

@@ -59,14 +59,15 @@ export function createSky() {
     // Clouds: stretched cirrus on a plane high above, lit from the sun side.
     const plane = dir.xz.div(h.add(0.16));
     const drift = vec2(U.time.mul(0.0035), U.time.mul(0.0012));
-    const cuv = plane.mul(vec2(0.55, 1.5)).add(drift);
+    const cuv = plane.mul(vec2(0.95, 1.2)).add(drift);
     const n = mx_fractal_noise_float(vec3(cuv, U.time.mul(0.004)), 4, 2.1, 0.52).mul(0.5).add(0.5);
     const n2 = mx_noise_float(vec3(cuv.mul(0.37).add(7.3), 1.7)).mul(0.5).add(0.5);
-    const cover = smoothstep(0.50, 0.86, n.mul(0.72).add(n2.mul(0.42)));
+    const cover = smoothstep(0.56, 0.84, n.mul(0.72).add(n2.mul(0.42)));
     const cloudFade = smoothstep(0.015, 0.2, h).mul(smoothstep(1.0, 0.55, h));
     const lit = pow(saturate(dot(dir, U.sunDir).mul(0.5).add(0.5)), 2.0);
-    const cloudCol = mix(U.cloudDark, U.cloudLit, lit.mul(0.85).add(n.mul(0.25)));
-    const cloudA = cover.mul(cloudFade).mul(mix(0.78, 0.22, smoothstep(0.5, 0.85, U.tod)));
+    const under = smoothstep(0.84, 0.56, n.mul(0.72).add(n2.mul(0.42)));
+    const cloudCol = mix(U.cloudDark, U.cloudLit, saturate(lit.mul(0.6).add(under.mul(0.5)).add(n.mul(0.15))));
+    const cloudA = cover.mul(cloudFade).mul(mix(0.7, 0.07, smoothstep(0.5, 0.85, U.tod)));
     col.assign(mix(col, cloudCol, cloudA));
 
     // Stars: jittered points in a 3D grid on the unit sphere, each with its own twinkle.
@@ -86,7 +87,7 @@ export function createSky() {
     const mw = mx_noise_float(dir.mul(3.2).add(11.0)).mul(0.5).add(0.5);
     const bandAxis = normalize(vec3(0.35, 0.5, -0.8));
     const mwBand = exp(pow(dot(dir, bandAxis), 2.0).mul(-34.0));
-    col.addAssign(vec3(0.16, 0.19, 0.30).mul(mwBand).mul(mw.mul(mw)).mul(starVis).mul(0.16).mul(hash3(floor(dir.mul(420.0))).mul(0.9).add(0.55)));
+    col.addAssign(vec3(0.16, 0.19, 0.30).mul(mwBand).mul(mw.mul(mw)).mul(starVis).mul(0.085).mul(hash3(floor(dir.mul(420.0))).mul(0.9).add(0.55)));
 
     // Moon: small soft disc with a wide halo.
     const md = saturate(dot(dir, moonDir));

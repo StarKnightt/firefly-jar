@@ -9,7 +9,7 @@ import {
 } from 'three/tsl';
 import { U } from '../tod.js';
 import { heightAtNode } from './layout.js';
-import { hash21, hash22, vnoise, patchNoise, yardMask, dirtMask, jarLight, GRASS_ROOT, GRASS_LUSH, GRASS_DRY, GRASS_TIP } from './common.js';
+import { hash21, hash22, vnoise, patchNoise, yardMask, dirtMask, jarLight, flyLight, GRASS_ROOT, GRASS_LUSH, GRASS_DRY, GRASS_TIP } from './common.js';
 
 const c3 = (c) => vec3(c.r, c.g, c.b);
 
@@ -94,9 +94,9 @@ function grassMaterial({ gridN, size, bladeHeight, innerHole, salt, wide, plume 
 
   const dist = length(world.sub(U.camPos.xz));
   // Thin out smoothly with distance, then fade the last ring to nothing.
-  const density = float(1.0).sub(smoothstep(R * 0.30, R * 0.92, dist).mul(0.72));
-  let vis = smoothstep(0.0, 0.16, density.sub(rnd2)).mul(float(1.0).sub(smoothstep(R * 0.80, R * 0.985, dist)));
-  if (innerHole > 0) vis = vis.mul(smoothstep(innerHole * 0.55, innerHole * 0.92, dist));
+  const density = float(1.0).sub(smoothstep(R * 0.35, R * 0.95, dist).mul(0.5));
+  let vis = smoothstep(0.0, 0.16, density.sub(rnd2)).mul(float(1.0).sub(smoothstep(R * 0.84, R * 0.99, dist)));
+  if (innerHole > 0) vis = vis.mul(smoothstep(innerHole * 0.42, innerHole * 0.86, dist));
 
   const patch = patchNoise(world);
   const yard = yardMask(world);
@@ -106,7 +106,8 @@ function grassMaterial({ gridN, size, bladeHeight, innerHole, salt, wide, plume 
   if (keep < 1) vis = vis.mul(smoothstep(1.0 - keep, 1.0 - keep + 0.05, hash21(worldCell.add(88.8)).mul(0.6).add(clumpBig.mul(0.4))));
   const heightScale = mix(0.42, 1.4, clump).mul(mix(0.72, 1.22, clumpBig)).mul(mix(0.8, 1.2, rnd)).mul(mix(1.0, 0.85, patch))
     .mul(mix(1.0, 0.17, yard)).mul(float(1.0).sub(smoothstep(0.25, 0.75, dirt)));
-  const hs = heightScale.mul(vis);
+  // Seed stalks stand a little above the blades, never above a child's eyes.
+  const hs = (plume ? heightScale.min(0.92) : heightScale).mul(vis);
   const H = hs.mul(bladeHeight);
 
   // Rotate the tuft about its root.
@@ -155,20 +156,22 @@ function grassMaterial({ gridN, size, bladeHeight, innerHole, salt, wide, plume 
   albedo = mix(albedo, tip, smoothstep(plume ? 0.6 : 0.45, plume ? 0.78 : 1.0, t));
   albedo = mix(albedo, vec3(0.22, 0.36, 0.11), yard.mul(0.8));
   // Self-shadowing down in the thatch.
-  const ao = mix(0.14, 1.0, smoothstep(0.0, 0.8, t));
+  const ao = mix(0.06, 1.0, smoothstep(0.08, 0.85, t));
 
   // Low sun shining through thin blades: brightest looking into the light.
   const viewDir = normalize(worldPos.sub(U.camPos));
   const into = pow(saturate(dot(viewDir, U.sunDir).mul(0.5).add(0.5)), 3.0);
   const through = into.mul(U.trans).mul(smoothstep(0.1, 0.9, t)).mul(plume ? 1.4 : 1.2);
-  const lit = albedo.mul(ao).mul(float(1.0).add(through)).add((plume ? vec3(1.0, 0.72, 0.3) : vec3(0.7, 0.8, 0.1)).mul(through).mul(plume ? 0.22 : 0.13));
+  // Lit from the front the low sun turns the field orange-gold; lit from behind the blades glow yellow-green.
+  const frontWarm = mix(vec3(1.0), vec3(1.22, 0.9, 0.5), U.trans.mul(float(1.0).sub(into)).mul(0.45));
+  const lit = albedo.mul(frontWarm).mul(ao).mul(float(1.0).add(through)).add((plume ? vec3(1.0, 0.72, 0.3) : vec3(0.58, 0.74, 0.05)).mul(through).mul(plume ? 0.2 : 0.2));
 
   mat.colorNode = varying(lit, 'vGrassCol');
 
   // A soft field normal: mostly up, tipped toward the light so vertical blades
   // catch a low sun, with a little of each blade's own facing for sparkle.
   const lightFlat = normalize(vec3(U.lightDir.x, 0.0, U.lightDir.z));
-  const n = normalize(vec3(0.0, 1.0, 0.0).add(lightFlat.mul(0.5)).add(faceN.mul(0.32)).add(vec3(windDir.x, 0.0, windDir.y).mul(bend.mul(0.5))));
+  const n = normalize(vec3(0.0, 1.0, 0.0).add(lightFlat.mul(0.3)).add(faceN.mul(0.32)).add(vec3(windDir.x, 0.0, windDir.y).mul(bend.mul(0.5))));
   const vN = varying(n, 'vGrassN');
   mat.normalNode = transformNormalToView(vN).normalize();
 
@@ -177,9 +180,10 @@ function grassMaterial({ gridN, size, bladeHeight, innerHole, salt, wide, plume 
   const toJar = normalize(U.jarPos.sub(worldPos));
   const toCam = normalize(U.camPos.sub(worldPos));
   const lee = smoothstep(-0.5, 0.3, dot(toJar, toCam));
-  const warmAlbedo = mix(albedo, vec3(dot(albedo, vec3(0.34))), 0.5).mul(vec3(1.3, 1.0, 0.55));
+  const warmAlbedo = mix(albedo, vec3(dot(albedo, vec3(0.34))), 0.4).mul(vec3(1.12, 1.04, 0.5));
   const jar = jarLight(worldPos, vec3(0.0, 1.0, 0.0), float(0.75)).mul(warmAlbedo).mul(mix(0.06, 1.0, smoothstep(0.05, 0.9, t)))
-    .mul(mix(0.1, 1.0, lee)).mul(mix(0.55, 1.3, rnd2)).mul(plume ? 0.9 : 1.25);
+    .mul(mix(0.06, 1.0, lee)).mul(mix(0.5, 1.3, rnd2)).mul(plume ? 0.45 : 1.25)
+    .add(flyLight(worldPos).mul(albedo).mul(smoothstep(0.2, 1.0, t)).mul(1.4));
   mat.emissiveNode = varying(jar, 'vGrassJar');
 
   return mat;

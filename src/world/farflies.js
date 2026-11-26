@@ -4,7 +4,7 @@
 // the fence, so a light you can walk up to is always one you can catch.
 import * as THREE from 'three/webgpu';
 import {
-  Fn, vec2, vec3, vec4, float, attribute, modelViewMatrix, cameraProjectionMatrix, positionGeometry, exp, smoothstep, sin, fract,
+  Fn, vec2, vec3, vec4, float, attribute, modelViewMatrix, cameraProjectionMatrix, positionGeometry, exp, smoothstep, sin, fract, mix,
   varying, max,
 } from 'three/tsl';
 import { U } from '../tod.js';
@@ -62,15 +62,18 @@ export function createFarFlies(count = 900) {
   const view = modelViewMatrix.mul(vec4(aPos.add(drift), 1.0));
   const dist = view.z.negate();
   // A minimum apparent size keeps the far ones as points of light instead of vanishing.
-  const size = max(float(0.055), dist.mul(0.0024)).mul(aPar.w);
-  const stretch = flash.mul(rise).mul(0.9);
+  const size = max(float(0.1), dist.mul(0.0085)).mul(aPar.w);
+  const stretch = flash.mul(rise).mul(0.35);
   const quad = vec2(positionGeometry.x, positionGeometry.y.mul(stretch.add(1.0)));
   mat.vertexNode = cameraProjectionMatrix.mul(view.add(vec4(quad.mul(size), 0.0, 0.0)));
   const vBright = varying(flash.mul(awake).mul(day.mul(1.3).add(1.0)), 'vFarBright');
   mat.colorNode = Fn(() => {
     const r2 = positionGeometry.xy.dot(positionGeometry.xy);
-    const core = exp(r2.mul(-26.0)).mul(3.6).add(exp(r2.mul(-5.0)).mul(0.22));
-    return vec4(vec3(0.56, 1.0, 0.07).mul(core).mul(vBright).mul(smoothstep(1.0, 0.7, r2)), 1.0);
+    const core = exp(r2.mul(-34.0));
+    const halo = exp(r2.mul(-5.5)).mul(0.2);
+    // A firefly's lantern is yellow at its heart and yellow-green at the edge.
+    const col = mix(vec3(0.48, 1.0, 0.045), vec3(1.0, 0.78, 0.1), core);
+    return vec4(col.mul(core.mul(4.0).add(halo)).mul(vBright).mul(smoothstep(1.0, 0.7, r2)), 1.0);
   })();
   const mesh = new THREE.Mesh(geo, mat);
   mesh.frustumCulled = false;

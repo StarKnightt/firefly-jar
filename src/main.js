@@ -224,7 +224,7 @@ async function boot() {
 
   function placeCamera() {
     const p = game.player;
-    p.pos.y = heightAt(p.pos.x, p.pos.z);
+    p.pos.y = game.controls ? game.controls.groundAt(p.pos.x, p.pos.z) : heightAt(p.pos.x, p.pos.z);
     camera.position.set(p.pos.x, p.pos.y + EYE + Math.sin(p.bob) * 0.022 * p.speed, p.pos.z);
     camera.rotation.set(p.pitch, p.yaw, 0);
     if (game.camOverride) { camera.position.copy(game.camOverride.pos); camera.lookAt(game.camOverride.look); }

@@ -64,7 +64,8 @@ function barkMaterial(tex, { tiling = new THREE.Vector2(1, 1), tint = 0xffffff }
   mat.colorNode = vec4(texture(tex.diff, st).rgb.mul(vec3(c.r, c.g, c.b)).mul(1.7), 1.0);
   mat.roughnessNode = texture(tex.rough, st).r;
   mat.normalNode = normalMap(texture(tex.nor, st), vec2(1.1, 1.1));
-  mat.emissiveNode = jarLight(positionWorld, normalWorld, float(0.25)).mul(vec3(0.2, 0.16, 0.11));
+  // By jar light the bark keeps its texture.
+  mat.emissiveNode = jarLight(positionWorld, normalWorld, float(0.25)).min(vec3(0.6)).mul(texture(tex.diff, st).rgb).mul(1.1);
   return mat;
 }
 
@@ -241,13 +242,15 @@ export function createFarTrees(assets, tier) {
     if (x > FENCE.minX - 7 && x < FENCE.maxX + 7 && z > FENCE.minZ - 7 && z < FENCE.maxZ + 7) continue;
     if (Math.hypot(x - HOUSE.x, z - HOUSE.z) < 15) continue;
     let dAz = Math.abs(Math.atan2(z, x) - sunAz); if (dAz > Math.PI) dAz = Math.PI * 2 - dAz;
-    if (dAz < 0.2 && r < 230 && rnd() < 0.85) continue;
+    if (dAz < 0.07 && r < 230) continue;
     const grove = Math.sin(x * 0.045 + 1.3) * Math.cos(z * 0.052 - 0.6) + 0.55 * Math.sin(x * 0.11 - z * 0.09);
     if (grove < -0.15 + rnd() * 0.5) continue;
     const v = Math.floor(rnd() * variants.length);
     spots[v].push({ x, z, s: 0.55 + Math.pow(rnd(), 1.4) * 1.25, yaw: rnd() * Math.PI * 2 });
   }
   // Two shade trees beside the farmhouse.
+  // A few to the west, where the sun goes down: their shadows reach right across the meadow.
+  [[-60, 6, 1.3], [-67, 35, 1.45], [-58, -23, 1.25], [-73, 52, 1.35], [-64, 21, 1.15], [-70, -6, 1.4]].forEach(([x, z, s], i) => spots[i % 3].push({ x, z, s, yaw: i * 1.7 }));
   spots[0].push({ x: HOUSE.x - 11.5, z: HOUSE.z - 2, s: 1.15, yaw: 1.0 });
   spots[1].push({ x: HOUSE.x + 12, z: HOUSE.z - 6, s: 1.2, yaw: 2.4 });
   spots[2].push({ x: HOUSE.x + 15, z: HOUSE.z + 6.5, s: 0.9, yaw: 4.0 });
@@ -272,6 +275,35 @@ export function createFarTrees(assets, tier) {
       group.add(m);
     }
     trunks.receiveShadow = true;
+    if (vi === 0) {
+      // Hedgerows and scrub: two unbroken dark bands beyond the fence, the wall of green that
+      // fireflies show up against.
+      const hedge = [];
+      for (const [off, step, h] of [[15, 3.0, 0.42], [27, 3.6, 0.6], [44, 4.4, 0.8]]) {
+        const x0 = FENCE.minX - off, x1 = FENCE.maxX + off, z0 = FENCE.minZ - off, z1 = FENCE.maxZ + off;
+        const per = 2 * (x1 - x0) + 2 * (z1 - z0);
+        for (let d = 0; d < per; d += step * (0.7 + rnd() * 0.6)) {
+          let x, z;
+          if (d < x1 - x0) { x = x0 + d; z = z0; } else if (d < x1 - x0 + z1 - z0) { x = x1; z = z0 + d - (x1 - x0); }
+          else if (d < 2 * (x1 - x0) + z1 - z0) { x = x1 - (d - (x1 - x0) - (z1 - z0)); z = z1; } else { x = x0; z = z1 - (d - 2 * (x1 - x0) - (z1 - z0)); }
+          x += (rnd() - 0.5) * 5; z += (rnd() - 0.5) * 5;
+          if (Math.hypot(x - HOUSE.x, z - HOUSE.z) < 24) continue;       // the yard stays open
+          let dz = Math.abs(Math.atan2(z, x) - sunAz); if (dz > Math.PI) dz = Math.PI * 2 - dz;
+          if (dz < 0.09) continue;                                        // and the place the sun sets
+          hedge.push({ x, z, s: 0.8 + rnd() * 0.7, h: h * (0.75 + rnd() * 0.6), yaw: rnd() * Math.PI * 2 });
+        }
+      }
+      const hedgeMesh = new THREE.InstancedMesh(tree.leafGeometry, leafMaterial(assets.tex.leaf, { tint: 0x6f8454, sway: 3 }), hedge.length);
+      hedge.forEach((s, i) => {
+        dummy.position.set(s.x, farHeight(s.x, s.z) - 0.5, s.z);
+        dummy.rotation.set(0, s.yaw, 0);
+        dummy.scale.set(v.scale * 1.7 * s.s, v.scale * s.h, v.scale * 1.7 * s.s);
+        dummy.updateMatrix();
+        hedgeMesh.setMatrixAt(i, dummy.matrix);
+      });
+      hedgeMesh.frustumCulled = false; hedgeMesh.castShadow = false;
+      group.add(hedgeMesh);
+    }
   });
   return group;
 }

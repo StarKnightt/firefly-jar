@@ -6,6 +6,7 @@ import {
   abs, max, min, varying, uniform,
 } from 'three/tsl';
 import { FENCE, heightAt, OAK } from './world/layout.js';
+import { U } from './tod.js';
 
 const WILD_MAX = 20, JAR_MAX = 20, SPARK_MAX = 90;
 const TOTAL = WILD_MAX + JAR_MAX + SPARK_MAX;
@@ -53,8 +54,11 @@ export function createFireflies(game) {
   const view = modelViewMatrix.mul(vec4(nPos, 1.0));
   // Up close a firefly is still a small light, not a ball: cap its size on screen.
   const dist = view.z.negate().max(0.05);
-  const size = min(nPar.x, dist.mul(0.02)).max(dist.mul(0.0016).mul(nPar.w.mul(3.0).add(1.0)));
-  const quad = vec2(positionGeometry.x, positionGeometry.y.mul(nExt.add(1.0)).add(nExt.mul(0.7)));
+  // ...and far away it never shrinks to nothing: one you can catch is always a light you can see,
+  // on a phone as much as on a monitor.
+  const minSize = uniform(0.0105);
+  const size = min(nPar.x, dist.mul(0.02)).max(dist.mul(minSize).mul(nExt)).max(dist.mul(0.0016).mul(nPar.w.mul(3.0).add(1.0)));
+  const quad = vec2(positionGeometry.x, positionGeometry.y);
   mat.vertexNode = cameraProjectionMatrix.mul(view.add(vec4(quad.mul(size), 0.0, 0.0)));
   const vPar = varying(nPar, 'vFly');
   mat.colorNode = Fn(() => {
@@ -66,9 +70,10 @@ export function createFireflies(game) {
     const glint = max(exp(abs(p.x).mul(-30.0)).mul(exp(abs(p.y).mul(-3.2))), exp(abs(p.y).mul(-30.0)).mul(exp(abs(p.x).mul(-3.2)))).mul(0.3).mul(vPar.w);
     const edge = smoothstep(1.0, 0.7, length(p));
     // Photinus chartreuse; amber inside the jar; pale gold once they are stars.
-    const wild = vec3(0.56, 1.0, 0.07), amber = vec3(1.0, 0.82, 0.22), star = vec3(1.0, 0.9, 0.62);
+    const wild = vec3(0.48, 1.0, 0.045), heart = vec3(1.0, 0.78, 0.1), amber = vec3(1.0, 0.84, 0.2), star = vec3(1.0, 0.9, 0.62);
     const col = mix(mix(wild, amber, vPar.z), star, vPar.w);
-    const hot = mix(col, vec3(0.92, 1.0, 0.6), core.mul(0.28));
+    // The lantern is yellow at its heart and yellow-green at the edge.
+    const hot = mix(col, heart, core.mul(float(1.0).sub(vPar.w)).mul(0.9));
     return vec4(hot.mul(core.mul(4.2).add(halo).add(glint)).mul(vPar.y).mul(edge), 1.0);
   })();
   const mesh = new THREE.Mesh(geo, mat);
@@ -86,15 +91,33 @@ export function createFireflies(game) {
   const hide = (i) => { Q[i * 4 + 1] = 0; Q[i * 4] = 0; };
 
   // Faint lines joining the new stars into a jar, drawn only at the very end.
-  const lineGeo = new THREE.BufferGeometry();
-  const linePos = new Float32Array(JAR_LINES.length * 6);
-  lineGeo.setAttribute('position', new THREE.BufferAttribute(linePos, 3));
-  const lineOpacity = uniform(0);
-  const lineMat = new THREE.LineBasicNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
-  lineMat.colorNode = vec4(vec3(1.0, 0.86, 0.55).mul(lineOpacity), 1.0);
-  const lines = new THREE.LineSegments(lineGeo, lineMat);
+  const SEG = JAR_LINES.length;
+  const lineGeo = new THREE.InstancedBufferGeometry();
+  lineGeo.setAttribute('position', new THREE.Float32BufferAttribute([0, -1, 0, 1, -1, 0, 1, 1, 0, 0, 1, 0], 3));
+  lineGeo.setIndex([0, 1, 2, 0, 2, 3]);
+  const lineA = new THREE.InstancedBufferAttribute(new Float32Array(SEG * 3), 3), lineB = new THREE.InstancedBufferAttribute(new Float32Array(SEG * 3), 3);
+  lineA.setUsage(THREE.DynamicDrawUsage); lineB.setUsage(THREE.DynamicDrawUsage);
+  lineGeo.setAttribute('aA', lineA); lineGeo.setAttribute('aB', lineB);
+  lineGeo.instanceCount = SEG;
+  const lineOpacity = uniform(0), lineAspect = uniform(1.78), lineWidth = uniform(0.004);
+  const lineMat = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, fog: false, side: THREE.DoubleSide });
+  {
+    // Lines with real width: each segment is a quad stretched between its two stars in screen space.
+    const ca = cameraProjectionMatrix.mul(modelViewMatrix.mul(vec4(attribute('aA', 'vec3'), 1.0)));
+    const cb = cameraProjectionMatrix.mul(modelViewMatrix.mul(vec4(attribute('aB', 'vec3'), 1.0)));
+    const pa = ca.xy.div(ca.w), pb = cb.xy.div(cb.w);
+    const d = pb.sub(pa).mul(vec2(lineAspect, 1.0)).normalize();
+    const n = vec2(d.y.negate(), d.x).div(vec2(lineAspect, 1.0));
+    // Stop a little short of each star so the line never runs through it.
+    const tt = mix(float(0.1), float(0.9), positionGeometry.x);
+    const c = mix(ca, cb, tt);
+    lineMat.vertexNode = vec4(c.xy.add(n.mul(positionGeometry.y).mul(lineWidth).mul(c.w)), c.z, c.w);
+    lineMat.colorNode = vec4(vec3(1.0, 0.86, 0.55).mul(lineOpacity).mul(smoothstep(1.0, 0.2, abs(positionGeometry.y))), 1.0);
+  }
+  const lines = new THREE.Mesh(lineGeo, lineMat);
   lines.frustumCulled = false;
   lines.visible = false;
+  lines.renderOrder = 18;
   game.scene.add(lines);
 
   // ---- wild fireflies ----
@@ -103,7 +126,7 @@ export function createFireflies(game) {
     wild.push({
       i, alive: false, pos: new THREE.Vector3(), vel: new THREE.Vector3(), home: new THREE.Vector3(),
       seed: rnd() * 100, period: 3 + rnd() * 3, clock: rnd() * 5, glow: 0, state: 'idle', t: 0, from: new THREE.Vector3(),
-      height: 1, dart: 0, dartDir: new THREE.Vector2(), fade: 0, pulse: 0, flash: 0,
+      height: 1, dart: 0, dartDir: new THREE.Vector2(), fade: 0, pulse: 0, flash: 0, spook: 0,
     });
   }
 
@@ -112,10 +135,12 @@ export function createFireflies(game) {
   // A firefly appears a short walk away, never right under your nose and never crowding another.
   function spawn(f, opts = {}) {
     const p = game.player.pos;
+    const dark = THREE.MathUtils.smoothstep(game.tod.value, 0.3, 0.9);
     for (let tries = 0; tries < 30; tries++) {
       let a, r;
-      if (opts.ahead) { a = game.player.yaw + (rnd() - 0.5) * 1.5; r = opts.near ? 9 + rnd() * 5 : 12 + rnd() * 10; }
-      else { a = rnd() * Math.PI * 2; r = 13 + rnd() * 26; }
+      if (opts.near) { a = game.player.yaw + (rnd() - 0.5) * 0.95; r = 5.5 + rnd() * 3.5; }
+      else if (opts.ahead) { a = game.player.yaw + (rnd() - 0.5) * 1.5; r = THREE.MathUtils.lerp(12, 15, dark) + rnd() * 9; }
+      else { a = rnd() * Math.PI * 2; r = THREE.MathUtils.lerp(13, 17, dark) + rnd() * 24; }
       // yaw 0 looks down -z.
       const x = p.x - Math.sin(a) * r, z = p.z - Math.cos(a) * r;
       if (!inFence(x, z, 3)) continue;
@@ -127,7 +152,7 @@ export function createFireflies(game) {
       f.pos.set(x, heightAt(x, z) + f.height, z);
       f.home.copy(f.pos);
       f.vel.set(0, 0, 0);
-      f.alive = true; f.state = 'idle'; f.fade = 0; f.glow = 0; f.dart = 0; f.pulse = 0;
+      f.alive = true; f.state = 'idle'; f.fade = 0; f.glow = 0; f.dart = 0; f.pulse = 0; f.spook = 0;
       f.period = 2.4 + rnd() * 2.6; f.clock = rnd() * f.period;
       return true;
     }
@@ -166,9 +191,9 @@ export function createFireflies(game) {
       for (const s of sparks) { s.life = 0; hide(s.i); }
       api.released = 0; api.releasing = false; api.spawnClock = 0; api.settled = 0;
       lines.visible = false; lineOpacity.value = 0;
-      // The first few: one close enough to learn on, the rest a walk away.
-      spawn(wild[0], { ahead: true, near: true, gap: 6 });
-      for (let n = 1; n < 5; n++) spawn(wild[n], n < 3 ? { ahead: true } : {});
+      // The first few are right there in front of you as the evening opens; the rest are a walk away.
+      for (let n = 0; n < 3; n++) spawn(wild[n], { near: true, gap: 3.2 });
+      for (let n = 3; n < 6; n++) spawn(wild[n], n < 4 ? { ahead: true } : {});
     },
 
     setJarCount(n) {
@@ -180,7 +205,7 @@ export function createFireflies(game) {
     },
 
     placeInJar(j) {
-      const a = rnd() * Math.PI * 2, r = Math.sqrt(rnd()) * (rig.JAR_R - 0.013);
+      const a = rnd() * Math.PI * 2, r = rnd() < 0.4 ? rig.JAR_R - 0.0065 : Math.sqrt(rnd()) * (rig.JAR_R - 0.013);
       j.local.set(Math.cos(a) * r, 0.016 + rnd() * 0.1, Math.sin(a) * r);
     },
 
@@ -189,7 +214,7 @@ export function createFireflies(game) {
       const w = window.innerWidth, h = window.innerHeight;
       let best = null, bestD = Infinity, far = null, farD = Infinity;
       for (const f of wild) {
-        if (!f.alive || f.state !== 'idle') continue;
+        if (!f.alive || f.state !== 'idle' || f.spook > 0) continue;
         tmp.copy(f.pos).project(camera);
         if (tmp.z > 1 || tmp.z < -1) continue;
         const dx = (tmp.x - ndcX) * w * 0.5, dy = (tmp.y - ndcY) * h * 0.5;
@@ -229,16 +254,17 @@ export function createFireflies(game) {
     },
 
     // The ending: let them all go. They circle you once, then climb into a jar-shaped constellation.
-    releaseAll(yaw) {
-      const el0 = 0.86;
+    releaseAll(yaw, layout = {}) {
+      const el0 = layout.el ?? 0.86, sc = layout.scale ?? 1;
+      yaw += layout.az ?? 0;
       let k = 0;
       jarFlies.forEach((j) => {
         if (!j.active) return;
         j.release = 0.2 + k * 0.4 + rnd() * 0.12;
         j.left = false;
         const [sx, sy] = JAR_STARS[k % JAR_STARS.length];
-        const el = el0 + sy * 0.25;
-        const az = yaw - (sx * 0.2) / Math.cos(el);
+        const el = el0 + sy * 0.25 * sc;
+        const az = yaw - (sx * 0.2 * sc) / Math.cos(el);
         const d = 420;
         j.star.set(-Math.sin(az) * Math.cos(el) * d, Math.sin(el) * d, -Math.cos(az) * Math.cos(el) * d);
         j.spin = yaw + Math.PI + (rnd() - 0.5) * 0.6; // they leave over the far rim, then sweep round
@@ -259,7 +285,9 @@ export function createFireflies(game) {
       const time = game.time, tod = game.tod.value, p = game.player.pos;
       const night = THREE.MathUtils.smoothstep(tod, 0.3, 0.9);
       api.reach = THREE.MathUtils.lerp(3.6, 3.0, night);
-      api.activeTarget = Math.round(THREE.MathUtils.lerp(5, 13, THREE.MathUtils.smoothstep(tod, 0.05, 0.8)));
+      api.activeTarget = Math.round(THREE.MathUtils.lerp(6, 10, THREE.MathUtils.smoothstep(tod, 0.05, 0.8)));
+      minSize.value = 0.0105 * THREE.MathUtils.clamp(1000 / window.innerHeight, 1, 2.3);
+      lineAspect.value = camera.aspect; lineWidth.value = 2.4 / window.innerHeight * THREE.MathUtils.clamp(900 / window.innerHeight, 1, 1.8);
       const speedMul = 1 + night * 0.7;
       const playing = game.phase === 'play' || game.phase === 'title';
 
@@ -276,7 +304,7 @@ export function createFireflies(game) {
       if (playing && alive < api.activeTarget && api.spawnClock > 1.6) {
         const f = wild.find((w) => !w.alive);
         // Always leave something to walk toward in front of the player.
-        if (f && spawn(f, ahead < 1 ? { ahead: true } : { gap: THREE.MathUtils.lerp(10, 7.5, night) })) api.spawnClock = 0;
+        if (f && spawn(f, ahead < 1 ? { ahead: true } : { gap: 9.5 })) api.spawnClock = 0;
       }
 
       const running = game.player.speed > 1.25;
@@ -291,10 +319,16 @@ export function createFireflies(game) {
           tmp.x += (f.home.x - f.pos.x) * 0.1; tmp.z += (f.home.z - f.pos.z) * 0.1;
           // After dark they are shy: charge at one and it slips away, walk up and it lets you.
           const dx = f.pos.x - p.x, dz = f.pos.z - p.z, dp = Math.hypot(dx, dz);
+          if (f.spook > 0) f.spook -= dt;
           if (night > 0.05 && dp < 4.2 && dp > 0.01) {
-            const shy = night * (running ? 2.6 : 0.5) * (1 - dp / 4.2);
+            const shy = night * 0.5 * (1 - dp / 4.2);
             tmp.x += dx / dp * shy; tmp.z += dz / dp * shy;
-            if (running) { f.home.x += dx / dp * shy * dt * 0.8; f.home.z += dz / dp * shy * dt * 0.8; }
+          }
+          // Run at one in the dark and it flares, bolts, and will not be caught for a few seconds.
+          if (night > 0.3 && running && dp < 5.5 && f.spook <= 0 && playing) {
+            f.spook = 3.2;
+            api.startle(f, 2.5);
+            api.events.push({ type: 'spooked' });
           }
           if (f.dart > 0.01) {
             tmp.x += f.dartDir.x * f.dart * 3.4; tmp.z += f.dartDir.y * f.dart * 3.4;
@@ -324,8 +358,7 @@ export function createFireflies(game) {
           const ember = THREE.MathUtils.lerp(0.2, 0.035, night);
           f.glow = (ember + flash * (1 - ember)) * f.fade + f.pulse * 0.8;
           const day = 1 - THREE.MathUtils.smoothstep(tod, 0.1, 0.55);
-          const rise = Math.max(0, f.vel.y) * flash;
-          put(f.i, f.pos, 0.07 + flash * 0.03 + f.pulse * 0.05, f.glow * (2.0 + day * 1.6), 0, 0, Math.min(1.6, rise * 2.2));
+          put(f.i, f.pos, 0.07 + flash * 0.03 + f.pulse * 0.05, f.glow * (2.0 + day * 1.6) * (f.spook > 0 ? 0.55 : 1), 0, 0, 1);
 
           if (dp > 46 && playing) f.alive = false;
         } else if (f.state === 'caught') {
@@ -337,13 +370,18 @@ export function createFireflies(game) {
           tmp3.copy(f.from).lerp(tmp2, 0.55); tmp3.y = Math.max(f.from.y, tmp2.y) + 0.2;
           const a = (1 - e) * (1 - e), b = 2 * (1 - e) * e, c = e * e;
           f.pos.set(a * f.from.x + b * tmp3.x + c * tmp2.x, a * f.from.y + b * tmp3.y + c * tmp2.y, a * f.from.z + b * tmp3.z + c * tmp2.z);
-          put(f.i, f.pos, 0.05 * (1 - e * 0.7), 2.0, 0.5 * e, 0, 0.5 * (1 - e));
+          put(f.i, f.pos, 0.05 * (1 - e * 0.7), 2.0, 0.5 * e, 0, 1 - e);
           if (rnd() < dt * 50) { tmp.set((rnd() - 0.5) * 0.1, -0.04 + rnd() * 0.08, (rnd() - 0.5) * 0.1); spark(f.pos, tmp, 0.4 + rnd() * 0.3, 0.007, 0.1); }
           if (f.t >= 1) {
             f.alive = false; hide(f.i);
             api.events.push({ type: 'landed' });
           }
         }
+      }
+
+      {
+        const near = wild.filter((f) => f.alive && f.state === 'idle').sort((a, b) => a.pos.distanceToSquared(camera.position) - b.pos.distanceToSquared(camera.position));
+        U.flyLights.forEach((u, n) => { const f = near[n]; if (f) u.value.set(f.pos.x, f.pos.y, f.pos.z, f.flash * 0.55 + f.pulse * 0.4); else u.value.set(0, -99, 0, 0); });
       }
 
       // In the jar: slow crawls and lazy blinks, out of step with each other.
@@ -381,9 +419,9 @@ export function createFireflies(game) {
           const arrive = THREE.MathUtils.smoothstep(age, 9.4, 11.0);
           if (arrive > 0.98) settled++;
           // Hold apparent size as it recedes, and swell a little as it takes its place.
-          const nearSize = 0.046, farSize = d * (0.0085 + 0.0035 * Math.sin(arrive * Math.PI) + (j.k >= 17 ? 0.002 : 0));
-          put(j.i, j.world, THREE.MathUtils.lerp(nearSize, farSize, THREE.MathUtils.smoothstep(k, 0.02, 0.6)), THREE.MathUtils.lerp(blink * 2.3, twinkle * 1.5, k), 0.55, k, 0);
-          if (age < 5 && rnd() < dt * 9) { tmp3.set((rnd() - 0.5) * 0.08, -0.1, (rnd() - 0.5) * 0.08); spark(j.world, tmp3, 0.8, 0.006, 0.5); }
+          const nearSize = 0.06, farSize = d * (0.0085 + 0.0035 * Math.sin(arrive * Math.PI) + (j.k >= 17 ? 0.002 : 0));
+          put(j.i, j.world, THREE.MathUtils.lerp(nearSize, farSize, THREE.MathUtils.smoothstep(k, 0.02, 0.6)), THREE.MathUtils.lerp(blink * 2.3, twinkle * (1.5 + Math.sin(arrive * Math.PI) * 1.2), k), 0.55, k, 1 - k);
+          if (age < 7.5 && rnd() < dt * 26) { tmp3.set((rnd() - 0.5) * 0.06, -0.06, (rnd() - 0.5) * 0.06); spark(j.world, tmp3, 0.9, 0.012 + kk * 0.5, 0.5); }
           continue;
         }
         const s = j.seed;
@@ -391,19 +429,19 @@ export function createFireflies(game) {
         j.world.copy(j.local).add(wob).applyMatrix4(M);
         const ph = j.clock % j.period;
         const blink = ph < 0.08 ? ph / 0.08 : Math.exp(-(ph - 0.08) * 2.4);
-        put(j.i, j.world, 0.0075 + blink * 0.004 + j.enter * 0.01, 0.7 + blink * 1.2 + j.enter * 1.6, 0.6, 0, 0);
+        put(j.i, j.world, 0.0105 + blink * 0.005 + j.enter * 0.01, 0.95 + blink * 1.5 + j.enter * 1.6, 0.3, 0, 0);
       }
       api.settled = settled;
 
       // The jar drawn in the sky, once they have all arrived.
       if (lines.visible) {
         const want = api.releasing && api.released > 0 && settled >= api.released && api.releaseClock > 12 ? 1 : 0;
-        lineOpacity.value += (want * 0.34 - lineOpacity.value) * (1 - Math.exp(-dt * 0.9));
+        lineOpacity.value += (want * 0.55 - lineOpacity.value) * (1 - Math.exp(-dt * 0.9));
         JAR_LINES.forEach(([a, b], n) => {
           const A = jarFlies[a].world, B = jarFlies[b].world;
-          linePos.set([A.x, A.y, A.z, B.x, B.y, B.z], n * 6);
+          lineA.setXYZ(n, A.x, A.y, A.z); lineB.setXYZ(n, B.x, B.y, B.z);
         });
-        lineGeo.attributes.position.needsUpdate = true;
+        lineA.needsUpdate = true; lineB.needsUpdate = true;
       }
 
       for (const s of sparks) {
