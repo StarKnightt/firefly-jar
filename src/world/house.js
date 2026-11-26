@@ -3,7 +3,7 @@ import * as THREE from 'three/webgpu';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import {
   Fn, vec2, vec3, vec4, float, texture, uv, positionLocal, positionWorld, normalWorld, normalLocal, fract, floor, mix, smoothstep, abs,
-  attribute, sin, max, min, step, pow, saturate, dot, normalize, normalMap, reflect, cameraPosition,
+  attribute, sin, max, min, step, pow, saturate, dot, normalize, normalMap, reflect, cameraPosition, normalWorldGeometry, transformNormalToView,
 } from 'three/tsl';
 import { HOUSE, HOUSE_YAW, farHeight } from './layout.js';
 import { vnoise, hash21 } from './common.js';
@@ -106,7 +106,8 @@ export function createHouse(assets) {
   const postXs = [-4.45, -2.35, -0.95, 0.95, 2.35, 4.45];
   const POST_TOP = 3.12;
   for (const x of postXs) {
-    box('trim', 0.14, POST_TOP - PF, 0.14, x, (POST_TOP + PF) / 2, pz1 - 0.12);
+    { const post = new THREE.CylinderGeometry(0.075, 0.085, POST_TOP - PF - 0.5, 8); post.rotateY(Math.PI / 8); post.translate(x, (POST_TOP + PF) / 2 + 0.1, pz1 - 0.12); put('trim', post); }
+    box('trim', 0.17, 0.5, 0.17, x, PF + 0.3, pz1 - 0.12);
     box('trim', 0.2, 0.1, 0.2, x, PF + 0.1, pz1 - 0.12);
     box('trim', 0.22, 0.09, 0.22, x, POST_TOP - 0.06, pz1 - 0.12);
   }
@@ -215,6 +216,12 @@ export function createHouse(assets) {
   const tex = assets.tex;
 
   const siding = new THREE.MeshStandardNodeMaterial({ roughness: 0.82, metalness: 0 });
+  siding.normalNode = Fn(() => {
+    const lap = fract(positionLocal.y.div(0.122));
+    // Tilt the face up a little across each board, and sharply at the lip.
+    const tilt = float(0.12).add(smoothstep(0.8, 1.0, lap).mul(-1.1)).add(smoothstep(0.0, 0.08, lap).oneMinus().mul(0.9));
+    return transformNormalToView(normalize(normalWorldGeometry.add(vec3(0.0, 1.0, 0.0).mul(tilt).mul(0.35))));
+  })();
   siding.colorNode = Fn(() => {
     const y = positionLocal.y;
     const lap = fract(y.div(0.122));
@@ -227,14 +234,14 @@ export function createHouse(assets) {
     // Rain splash and mildew climbing up from the ground.
     const splash = smoothstep(1.9, 0.55, y).mul(0.3);
     const col = mix(paint, vec3(0.38, 0.40, 0.29), splash).mul(float(1.0).sub(line.mul(0.5)));
-    return vec4(col, 1.0);
+    return vec4(col.mul(mix(1.0, 0.42, smoothstep(0.5, 0.9, U.tod))), 1.0);
   })();
   mats.siding = siding;
 
   const trim = new THREE.MeshStandardNodeMaterial({ roughness: 0.7 });
   trim.colorNode = Fn(() => {
     const g = vnoise(positionLocal.xy.add(positionLocal.z).mul(3.0));
-    return vec4(mix(vec3(0.88, 0.86, 0.80), vec3(0.72, 0.70, 0.63), g.mul(0.5)), 1.0);
+    return vec4(mix(vec3(0.88, 0.86, 0.80), vec3(0.72, 0.70, 0.63), g.mul(0.5)).mul(mix(1.0, 0.45, smoothstep(0.5, 0.9, U.tod))), 1.0);
   })();
   mats.trim = trim;
 
@@ -261,7 +268,13 @@ export function createHouse(assets) {
   mats.door = new THREE.MeshStandardNodeMaterial({ roughness: 0.55, color: 0xa63c2e });
   mats.doorDark = new THREE.MeshStandardNodeMaterial({ roughness: 0.6, color: 0x7e2a21 });
   mats.shutter = new THREE.MeshStandardNodeMaterial({ roughness: 0.75, color: 0x2f4a3c });
-  mats.ceiling = new THREE.MeshStandardNodeMaterial({ roughness: 0.8, color: 0x9fc0c9 }); // haint blue
+  // Haint blue beadboard overhead.
+  const ceilingM = new THREE.MeshStandardNodeMaterial({ roughness: 0.8 });
+  ceilingM.colorNode = Fn(() => {
+    const bead = smoothstep(0.0, 0.08, abs(fract(positionLocal.x.div(0.09)).sub(0.5)));
+    return vec4(vec3(0.62, 0.75, 0.79).mul(bead.mul(0.25).add(0.75)), 1.0);
+  })();
+  mats.ceiling = ceilingM;
 
   const brick = new THREE.MeshStandardNodeMaterial({ roughness: 0.95 });
   brick.colorNode = Fn(() => {
@@ -321,8 +334,9 @@ export function createHouse(assets) {
 
   // ---------- porch light ----------
   const lampPos = new THREE.Vector3(0.98, PF + 2.05, hd + 0.16);
-  const fixture = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.24, 0.12), new THREE.MeshStandardNodeMaterial({ color: 0x1b1b1b, roughness: 0.5 }));
-  fixture.position.copy(lampPos).add(new THREE.Vector3(0, 0.14, -0.06));
+  const fixture = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.03, 14), new THREE.MeshStandardNodeMaterial({ color: 0x1b1b1b, roughness: 0.5 }));
+  fixture.rotation.x = Math.PI / 2;
+  fixture.position.copy(lampPos).add(new THREE.Vector3(0, 0.06, -0.14));
   group.add(fixture);
   const bulbMat = new THREE.MeshBasicNodeMaterial();
   const bulbOn = smoothstep(0.1, 0.3, U.tod);
@@ -334,12 +348,17 @@ export function createHouse(assets) {
   shade.position.copy(lampPos).add(new THREE.Vector3(0, 0.085, 0));
   group.add(shade);
   const porchLight = new THREE.PointLight(0xffb469, 0, 13, 1.6);
-  porchLight.position.copy(lampPos).add(new THREE.Vector3(0, -0.12, 0.5));
+  porchLight.position.copy(lampPos).add(new THREE.Vector3(0, -0.18, 0.95));
   group.add(porchLight);
   // By day the open sky and the lawn light the porch from the front; nothing else would reach under the roof.
   const bounce = new THREE.PointLight(0xfff0dc, 0, 9, 1.2);
   bounce.position.set(0, PF + 1.5, hd + 2.2);
   group.add(bounce);
+  // What the lamp throws back off the boards and the lawn: it warms the outer faces of the posts,
+  // the steps, and anyone standing at the foot of them.
+  const spill = new THREE.PointLight(0xffb878, 0, 10, 1.4);
+  spill.position.set(0.3, PF + 0.9, hd + 4.6);
+  group.add(spill);
 
   // Rocking chair on the porch.
   const chair = assets.models.chair;
@@ -357,10 +376,11 @@ export function createHouse(assets) {
   const worldLamp = new THREE.Vector3();
   const update = (time, tod) => {
     const on = THREE.MathUtils.smoothstep(tod, 0.1, 0.32) * (1 + Math.sin(time * 9.0) * 0.008);
-    porchLight.intensity = on * 7.5;
+    porchLight.intensity = on * 9.5;
     U.porchOn.value = on;
     bounce.color.copy(U.ambient.value).lerp(U.lightCol.value, 0.35);
     bounce.intensity = 1.6;
+    spill.intensity = on * 2.6;
     // Someone just got up: the chair is still rocking, slower and slower, then again in a while.
     const cyc = (time % 46) / 46;
     chairPivot.rotation.x = Math.sin(time * 2.1) * 0.07 * Math.max(0, 1 - cyc * 2.2);

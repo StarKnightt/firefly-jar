@@ -279,3 +279,66 @@ Found while testing:
 
 Checks after round 3: bot play-through passes; real-input test passes; 1920x1080 on the RTX 4060
 with GPU-synced timing is 94 to 110 fps average, worst 1% 61 to 74 fps.
+
+## Round 4: critic
+
+Seven major problems and fifteen minor. A fresh critic weighs things its own way, so the count
+went up from five even though it did not repeat most of round 3's findings.
+
+- **Major 1.** The reaching arm still read as a plank: straight, untextured, wider than the jar.
+- **Major 2.** The jar's light on the grass swung between luma 22 and 62 as the player turned on
+  the spot, was not centred on the jar, and reached the screen corners.
+- **Major 3.** Fingers seen against the jar were the brightest thing on screen (166 to 174 against
+  60 for the glass); at golden hour the hands were a grey mauve with no warm rim.
+- **Major 4.** The meadow went black while the sky was still bright: 9 to 1 between sky and grass
+  at five caught and at fifteen, against 3 or 4 to 1 in the references. Grass facing away from the
+  sun measured 12 to 17 with the sun still up. (Round 2's darkening had overshot.)
+- **Major 5.** One to three lights visible across the night meadow.
+- **Major 6.** The farmhouse up close: ruled-line siding, square bars for posts, a box for a lamp,
+  a wall burnt to 228 beside it, and the whole house evenly visible from the meadow at night.
+- **Major 7.** On a phone held sideways the constellation was 65 px wide beside an egg-shaped moon.
+- Minor: night no harder unless you run; a hint left over as the ending began; a fast player
+  finishing at dusk; lime fireflies in full sun; a flame-like streak in the empty jar; cobalt night
+  sky; near misses with no word of feedback; a share button that hung; slow turning on an upright
+  phone.
+
+Two of these pull against earlier rounds. Round 3 said lights that cannot be caught must not be
+mistaken for ones that can; round 4 said the night meadow is empty. Round 2 said the grass was too
+bright and flat; round 4 said it had gone too dark. The fixes below are the ones that satisfy both.
+
+## Round 4: fixes
+
+- **The arm is a sleeve.** Both forearms now wear the striped long-sleeved shirt (the same one you
+  see looking down), with a ribbed cuff and a short wrist of skin. Stripes round the arm give it
+  form. The reaching arm rises beside the jar, well back from the eye; the lid hand pinches the
+  rim and keeps its shape when it carries the lid away; the lift is quicker.
+- **An even pool of jar light.** The light on the grass is now measured across the ground from
+  the point under the jar, so it is round, centred, and the same whichever way you face, with a
+  radius of about a metre and a half. Warm amber.
+- **Hands.** Skin lit by the jar is capped well below the jar itself; the streak on the glass is a
+  faint reflection; the low sun rims the hands more strongly. A tree that had put the opening view
+  in shade was moved. Fingernails stand proud enough to catch light.
+- **A meadow you can see all evening.** Sky fill on the ground raised from golden hour through
+  blue hour and exposure eased up as the sun drops. Grass facing away from the sun now measures 49
+  at golden hour, 53 at sunset and 25 in late blue hour (it was 12 to 17).
+- **More lights, none of them a trap.** About 300 more ambient fireflies low over the meadow
+  itself, plus the ones past the fence. They only ever show at a distance: each one goes dark as
+  you come within about 20 metres, so any light you can walk up to is one you can catch.
+- **The farmhouse.** Clapboards with a real lap profile that catches light at each lip; chamfered
+  posts on square bases; beadboard ceiling; a small lantern on a back plate. The lamp stands
+  farther off the wall; warm light spills from the porch onto the posts, the steps and whoever
+  stands at them. Siding and trim sink toward the dark at night, so from the meadow it is the porch
+  and the windows that show.
+- **The last frame.** The constellation is 75% larger on a sideways phone and a quarter larger on
+  an upright one, and the ending turns far enough from the moon to keep it out of frame.
+- **Night takes a little care.** After dark a firefly bolts if you are still moving when you get
+  within two metres: stop when the ring appears. Running still startles them from farther off.
+  The second ten catches bring night on faster, so a quick player still finishes in the dark.
+- Also: yellow-hearted fireflies that are smaller before dusk; a word of feedback on a near miss;
+  hints cleared the instant the ending starts; the share button gives up waiting after a second
+  and a half and copies the link; a full-width swipe turns about 200 degrees in either
+  orientation; a calmer, less saturated night sky with more stars and a sun with real glare.
+
+Checks after round 4: bot play-through passes (a perfect-aim bot finishes at time of day 0.68);
+real-input test passes; 1920x1080 on the RTX 4060 with GPU-synced timing is 92 to 105 fps average,
+worst 1% 60 to 70 fps.

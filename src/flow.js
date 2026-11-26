@@ -9,7 +9,8 @@ const wrap = (a) => { while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI)
 
 // The evening runs on the clock: about seven minutes from golden hour to night if you only
 // stand and watch. Each firefly in the jar brings it a little closer.
-const todFor = (seconds, count) => Math.min(1, seconds / 430 + count * 0.0125);
+// The second ten bring it on faster, so even a quick child finishes in the dark.
+const todFor = (seconds, count) => Math.min(1, seconds / 430 + count * 0.0125 + Math.max(0, count - 10) * 0.02);
 
 export function createFlow(game) {
   const { rig, fireflies, audio, ui, controls } = game;
@@ -32,7 +33,7 @@ export function createFlow(game) {
     if (dOak < 60) add(OAK.x, OAK.z, Math.atan2(9.5, Math.max(1, dOak)) + 0.62);
     const dHouse = Math.hypot(HOUSE.x - p.x, HOUSE.z - p.z);
     if (dHouse < 34) add(HOUSE.x, HOUSE.z, Math.atan2(7, Math.max(1, dHouse)) + 0.45);
-    blocked.push({ yaw: Math.atan2(-MOON_DIR.x, -MOON_DIR.z), half: 0.75 });
+    blocked.push({ yaw: Math.atan2(-MOON_DIR.x, -MOON_DIR.z), half: 1.2 });
     let best = from, bestCost = Infinity;
     for (let i = 0; i < 48; i++) {
       const yaw = from + (i % 2 ? 1 : -1) * Math.ceil(i / 2) * (Math.PI / 24);
@@ -110,7 +111,10 @@ export function createFlow(game) {
       }
       // A swipe at the air. If one was close to where you aimed, it flares and darts away.
       const near = fireflies.pick(nx, ny, radius, 3.2);
-      if (near) fireflies.startle(near.f, near.tooFar ? 0.5 : 1);
+      if (near) {
+        fireflies.startle(near.f, near.tooFar ? 0.5 : 1);
+        if (!near.tooFar && game.time - (state.nearMissAt ?? -99) > 5) { state.nearMissAt = game.time; ui.hint(touch ? 'just missed. tap right on the light' : 'just missed. put the dot right on it', 2.6, true); }
+      }
       rig.scoop(sx, sy * 0.8, false);
       ui.ripple(nx, ny);
       state.emptyReaches = (state.emptyReaches || 0) + 1;
@@ -134,7 +138,7 @@ export function createFlow(game) {
       if (n === 1) ui.hint('one. nineteen more to fill the jar', 4.5, true);
       else if (n === 5) ui.hint('the jar is starting to glow', 4, true);
       else if (n === 10) ui.hint('halfway. the light is going', 4, true);
-      else if (n === 14) ui.hint('they are shy in the dark. creep up on them', 5, true);
+      else if (n === 13) ui.hint('they are shy in the dark. stop when the ring appears', 5.5, true);
       else if (n === 19) ui.hint('one more', 4, true);
       if (n >= game.goal) flow.startEnding();
     },
@@ -178,7 +182,7 @@ export function createFlow(game) {
       const p = game.player;
       for (const e of fireflies.events.splice(0)) {
         if (e.type === 'landed') flow.landed();
-        else if (e.type === 'spooked') { if (game.time - (state.spookAt ?? -99) > 9) { state.spookAt = game.time; ui.hint('you startled it. walk up slowly', 3.2, true); } }
+        else if (e.type === 'spooked') { if (game.time - (state.spookAt ?? -99) > 7) { state.spookAt = game.time; ui.hint(e.how === 'close' ? 'too close. stop when the ring appears' : 'you startled it. no running after dark', 3.4, true); } }
         else if (e.type === 'released') { snd('release', e.n); log({ type: 'release', n: e.n }); rig.setCount(Math.max(0, game.count - e.n), game.goal); }
       }
 
@@ -247,7 +251,7 @@ export function createFlow(game) {
           // Where the jar of stars goes depends on the screen: above the end card on a monitor or an
           // upright phone, beside it on a phone held sideways.
           const aspect = window.innerWidth / window.innerHeight, short = window.innerHeight < 500;
-          const layout = aspect < 1 ? { y: 0.3, scale: 0.8 } : short ? { x: -0.5, y: 0.02, scale: 0.72 } : { y: 0.27, scale: 1 };
+          const layout = aspect < 1 ? { y: 0.32, scale: 1.0 } : short ? { x: -0.5, y: 0.0, scale: 1.25 } : { y: 0.27, scale: 1.05 };
           fireflies.releaseAll(state.starYaw, layout);
         }
         // Hands sink out of frame once the jar is empty, so the last thing on screen is the sky.

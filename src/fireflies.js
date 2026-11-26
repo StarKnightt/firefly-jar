@@ -71,7 +71,7 @@ export function createFireflies(game) {
     const glint = max(exp(abs(p.x).mul(-30.0)).mul(exp(abs(p.y).mul(-3.2))), exp(abs(p.y).mul(-30.0)).mul(exp(abs(p.x).mul(-3.2)))).mul(0.3).mul(vPar.w);
     const edge = smoothstep(1.0, 0.7, length(p));
     // Photinus chartreuse; amber inside the jar; pale gold once they are stars.
-    const wild = vec3(0.42, 0.9, 0.03), heart = vec3(0.78, 0.84, 0.06), amber = vec3(1.0, 0.84, 0.2), star = vec3(1.0, 0.9, 0.62);
+    const wild = vec3(0.66, 0.9, 0.04), heart = vec3(1.0, 0.92, 0.28), amber = vec3(1.0, 0.84, 0.2), star = vec3(1.0, 0.9, 0.62);
     const col = mix(mix(wild, amber, vPar.z), star, vPar.w);
     // The lantern is yellow at its heart and yellow-green at the edge.
     const hot = mix(col, heart, core.mul(float(1.0).sub(vPar.w)).mul(0.9));
@@ -294,7 +294,7 @@ export function createFireflies(game) {
       const night = THREE.MathUtils.smoothstep(tod, 0.3, 0.9);
       api.reach = THREE.MathUtils.lerp(3.6, 3.0, night);
       api.activeTarget = Math.round(THREE.MathUtils.lerp(6, 10, THREE.MathUtils.smoothstep(tod, 0.05, 0.8)));
-      minSize.value = 0.0125 * THREE.MathUtils.clamp(1000 / window.innerHeight, 1, 2.3);
+      minSize.value = 0.0125 * THREE.MathUtils.clamp(1000 / window.innerHeight, 1, 2.3) * THREE.MathUtils.lerp(0.62, 1, THREE.MathUtils.smoothstep(tod, 0.1, 0.4));
       lineAspect.value = camera.aspect; lineWidth.value = 2.0 / window.innerHeight;
       const speedMul = 1 + night * 0.7;
       const playing = game.phase === 'play' || game.phase === 'title';
@@ -336,7 +336,11 @@ export function createFireflies(game) {
           if (night > 0.3 && running && dp < 5.5 && f.spook <= 0 && playing) {
             f.spook = 4.6;
             api.startle(f, 2.6);
-            api.events.push({ type: 'spooked' });
+            api.events.push({ type: 'spooked', how: 'run' });
+          } else if (night > 0.55 && game.player.speed > 0.55 && dp < 1.9 && f.spook <= 0 && playing && game.phase === 'play') {
+            f.spook = 2.6;
+            api.startle(f, 1.4);
+            api.events.push({ type: 'spooked', how: 'close' });
           }
           if (f.dart > 0.01) {
             tmp.x += f.dartDir.x * f.dart * 3.4; tmp.z += f.dartDir.y * f.dart * 3.4;
@@ -365,7 +369,7 @@ export function createFireflies(game) {
           f.pulse = Math.max(0, f.pulse - dt * 1.3);
           f.flash = flash;
           // By day a faint ember lets the eye follow one; at night they go properly dark between flashes.
-          const ember = THREE.MathUtils.lerp(0.2, 0.035, night);
+          const ember = THREE.MathUtils.lerp(0.2, 0.08, night);
           f.glow = (ember + flash * (1 - ember)) * f.fade + f.pulse * 0.8;
           const day = 1 - THREE.MathUtils.smoothstep(tod, 0.1, 0.55);
           put(f.i, f.pos, 0.07 + flash * 0.03 + f.pulse * 0.05, f.glow * (2.0 + day * 1.6) * (f.spook > 0 ? 0.55 : 1), 0, 0, 1);

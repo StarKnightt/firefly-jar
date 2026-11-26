@@ -44,7 +44,7 @@ export function createSky() {
     // Sun: wide warm scatter, tight corona, disc.
     const sd = saturate(dot(dir, U.sunDir));
     const sunUp = smoothstep(-0.11, 0.02, U.sunDir.y);
-    const scatter = pow(sd, 7.0).mul(0.22).add(pow(sd, 60.0).mul(0.45)).add(pow(sd, 700.0).mul(1.4));
+    const scatter = pow(sd, 7.0).mul(0.26).add(pow(sd, 60.0).mul(0.7)).add(pow(sd, 600.0).mul(2.6));
     col.addAssign(U.sunCol.mul(scatter).mul(U.glowAmt).mul(mix(0.35, 1.0, sunUp)));
     const disc = smoothstep(0.99990, 0.99996, sd).mul(smoothstep(-0.012, 0.01, h));
     col.addAssign(mix(U.sunCol, vec3(1.0, 0.86, 0.6), 0.45).mul(disc).mul(22.0).mul(U.sunInt.min(1.0)));
@@ -78,9 +78,9 @@ export function createSky() {
     const rnd2 = hash3(cell.add(19.7));
     const off = vec3(rnd2, hash3(cell.add(4.1)), hash3(cell.add(9.3))).sub(0.5).mul(0.55);
     const d = length(fract(sp).sub(0.5).sub(off));
-    const size = mix(0.055, 0.15, pow(rnd2, 4.0));
+    const size = mix(0.06, 0.17, pow(rnd2, 4.0));
     const twinkle = sin(U.time.mul(mix(1.5, 4.5, rnd2)).add(rnd.mul(40.0))).mul(0.28).add(0.78);
-    const star = smoothstep(size, 0.0, d).mul(smoothstep(0.70, 0.705, rnd)).mul(twinkle);
+    const star = smoothstep(size, 0.0, d).mul(smoothstep(0.62, 0.625, rnd)).mul(twinkle);
     const starCol = mix(vec3(1.0, 0.86, 0.70), vec3(0.74, 0.86, 1.0), rnd2);
     col.addAssign(starCol.mul(star).mul(starVis).mul(mix(0.5, 9.0, pow(rnd2, 5.0))));
     // A faint milky band so the night sky has structure, not just dots.

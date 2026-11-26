@@ -18,7 +18,12 @@ export function createFarFlies(count = 900) {
   while (n < count) {
     const kind = rnd();
     let x, y, z;
-    if (kind < 0.8) {
+    if (kind < 0.3) {
+      // Low over the meadow itself. These only ever show at a distance (they go dark as you come
+      // near), so any light you can walk up to is one you can catch.
+      x = FENCE.minX + 2 + rnd() * (FENCE.maxX - FENCE.minX - 4); z = FENCE.minZ + 2 + rnd() * (FENCE.maxZ - FENCE.minZ - 4);
+      y = heightAt(x, z) + 0.7 + Math.pow(rnd(), 1.5) * 1.5;
+    } else if (kind < 0.85) {
       // Low over the grass beyond the fence, thickest a little way past it.
       const a = rnd() * Math.PI * 2, r = 30 + Math.pow(rnd(), 1.5) * 100;
       x = Math.cos(a) * r * 1.2; z = Math.sin(a) * r;
@@ -53,13 +58,13 @@ export function createFarFlies(count = 900) {
   const flash = smoothstep(0.0, 0.07, ph).mul(float(1.0).sub(smoothstep(0.32, 0.62, ph)));
   const rise = smoothstep(0.0, 0.6, ph).mul(float(1.0).sub(smoothstep(0.6, 2.0, ph)));
   const drift = vec3(sin(t.mul(0.31)).mul(1.1), sin(t.mul(0.53)).mul(0.22).add(rise.mul(0.34)), sin(t.mul(0.27).add(1.7)).mul(1.1));
-  // The first appear in the last of the sun; by blue hour they are all out.
-  const awake = smoothstep(aPar.z.mul(0.42), aPar.z.mul(0.42).add(0.1), U.tod.add(0.04));
-  const day = float(1.0).sub(smoothstep(0.1, 0.5, U.tod));
   const view = modelViewMatrix.mul(vec4(aPos.add(drift), 1.0));
   const dist = view.z.negate();
+  // The first appear in the last of the sun; by blue hour they are all out.
+  const awake = smoothstep(aPar.z.mul(0.42), aPar.z.mul(0.42).add(0.1), U.tod.add(0.04)).mul(smoothstep(15.0, 22.0, dist));
+  const day = float(1.0).sub(smoothstep(0.1, 0.5, U.tod));
   // A minimum apparent size keeps the far ones as points of light instead of vanishing.
-  const size = max(float(0.07), dist.mul(0.0055)).mul(aPar.w);
+  const size = max(float(0.07), dist.mul(0.0068)).mul(aPar.w);
   const stretch = flash.mul(rise).mul(0.35);
   const quad = vec2(positionGeometry.x, positionGeometry.y.mul(stretch.add(1.0)));
   mat.vertexNode = cameraProjectionMatrix.mul(view.add(vec4(quad.mul(size), 0.0, 0.0)));
@@ -69,8 +74,8 @@ export function createFarFlies(count = 900) {
     const core = exp(r2.mul(-34.0));
     const halo = exp(r2.mul(-5.5)).mul(0.2);
     // A firefly's lantern is yellow at its heart and yellow-green at the edge.
-    const col = mix(vec3(0.48, 1.0, 0.045), vec3(1.0, 0.78, 0.1), core);
-    return vec4(col.mul(core.mul(2.4).add(halo)).mul(vBright).mul(smoothstep(1.0, 0.7, r2)), 1.0);
+    const col = mix(vec3(0.66, 0.9, 0.05), vec3(1.0, 0.9, 0.3), core);
+    return vec4(col.mul(core.mul(3.0).add(halo)).mul(vBright).mul(smoothstep(1.0, 0.7, r2)), 1.0);
   })();
   const mesh = new THREE.Mesh(geo, mat);
   mesh.frustumCulled = false;

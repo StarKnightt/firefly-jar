@@ -5,7 +5,7 @@ import { FENCE, GATE, HOUSE, HOUSE_YAW, heightAt } from './world/layout.js';
 
 // The porch, in the farmhouse's own coordinates (it is turned a little): boards from BACK to FRONT,
 // three steps down to FOOT, a rail all round except at the steps.
-const PORCH = { half: 4.2, step: 0.78, back: 4.05, front: 5.82, foot: 7.3, height: 0.56 };
+const PORCH = { half: 3.95, step: 0.78, back: 4.35, front: 5.5, foot: 7.3, height: 0.56 };
 const hc = Math.cos(HOUSE_YAW), hs = Math.sin(HOUSE_YAW);
 const toHouse = (x, z) => [(x - HOUSE.x) * hc - (z - HOUSE.z) * hs, (x - HOUSE.x) * hs + (z - HOUSE.z) * hc];
 const fromHouse = (lx, lz) => [HOUSE.x + lx * hc + lz * hs, HOUSE.z - lx * hs + lz * hc];
@@ -33,7 +33,7 @@ export function createControls(game, { onCatch, onLockChange }) {
   const look = (dx, dy, sens) => {
     const p = game.player;
     p.yaw -= dx * sens;
-    p.pitch = THREE.MathUtils.clamp(p.pitch - dy * sens, -1.3, 1.48);
+    p.pitch = THREE.MathUtils.clamp(p.pitch - dy * sens, -1.1, 1.48);
   };
 
   // ---------- keyboard ----------
@@ -115,7 +115,8 @@ export function createControls(game, { onCatch, onLockChange }) {
     t.x = e.clientX; t.y = e.clientY;
     t.moved = Math.max(t.moved, Math.hypot(t.x - t.x0, t.y - t.y0));
     // A swipe across the screen turns you about the same amount whichever way the phone is held.
-    if (t.role === 'look') look(dx, dy, 2.5 / Math.max(360, Math.min(window.innerWidth, window.innerHeight)));
+    // A swipe across the full width turns you about 200 degrees, whichever way the phone is held.
+    if (t.role === 'look') look(dx, dy, 3.5 / THREE.MathUtils.clamp(window.innerWidth, 360, 900));
     else if (t.role === 'stick' && t.moved > 9) {
       if (!t.shown) { t.shown = true; setStick(t.x0, t.y0, true); }
       let sx = t.x - t.x0, sy = t.y - t.y0;

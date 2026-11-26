@@ -9,7 +9,7 @@ import {
 } from 'three/tsl';
 import { U } from '../tod.js';
 import { heightAtNode } from './layout.js';
-import { hash21, hash22, vnoise, patchNoise, yardMask, dirtMask, jarLight, flyLight, porchPool, GRASS_ROOT, GRASS_LUSH, GRASS_DRY, GRASS_TIP } from './common.js';
+import { hash21, hash22, vnoise, patchNoise, yardMask, dirtMask, jarLight, jarPool, flyLight, porchPool, GRASS_ROOT, GRASS_LUSH, GRASS_DRY, GRASS_TIP } from './common.js';
 
 const c3 = (c) => vec3(c.r, c.g, c.b);
 
@@ -156,7 +156,7 @@ function grassMaterial({ gridN, size, bladeHeight, innerHole, salt, wide, plume 
   albedo = mix(albedo, tip, smoothstep(plume ? 0.6 : 0.45, plume ? 0.78 : 1.0, t));
   albedo = mix(albedo, vec3(0.22, 0.36, 0.11), yard.mul(0.8));
   // Self-shadowing down in the thatch.
-  const ao = mix(0.035, 1.0, smoothstep(0.12, 0.9, t));
+  const ao = mix(0.09, 1.0, smoothstep(0.1, 0.85, t));
 
   // Low sun shining through thin blades: brightest looking into the light.
   const viewDir = normalize(worldPos.sub(U.camPos));
@@ -179,10 +179,10 @@ function grassMaterial({ gridN, size, bladeHeight, innerHole, salt, wide, plume 
   // and the light stay dark against it.
   const toJar = normalize(U.jarPos.sub(worldPos));
   const toCam = normalize(U.camPos.sub(worldPos));
-  const lee = smoothstep(-0.5, 0.3, dot(toJar, toCam));
-  const warmAlbedo = mix(albedo, vec3(dot(albedo, vec3(0.34))), 0.55).mul(vec3(1.08, 1.0, 0.62));
-  const jar = jarLight(worldPos, vec3(0.0, 1.0, 0.0), float(0.75)).mul(warmAlbedo).mul(mix(0.06, 1.0, smoothstep(0.05, 0.9, t)))
-    .mul(mix(0.12, 1.0, lee)).mul(mix(0.4, 1.3, rnd2)).mul(plume ? 0.3 : 0.72)
+  const lee = smoothstep(-0.6, 0.2, dot(toJar, toCam));
+  const warmAlbedo = mix(albedo, vec3(dot(albedo, vec3(0.34))), 0.6).mul(vec3(1.1, 0.98, 0.7));
+  const jar = jarPool(worldPos).mul(warmAlbedo).mul(mix(0.1, 1.0, smoothstep(0.05, 0.9, t)))
+    .mul(mix(0.3, 1.0, lee)).mul(plume ? 0.5 : 1.0)
     .add(flyLight(worldPos).mul(albedo).mul(smoothstep(0.2, 1.0, t)).mul(1.4))
     .add(porchPool(worldPos).mul(albedo).mul(mix(0.25, 1.0, t)).mul(2.6));
   mat.emissiveNode = varying(jar, 'vGrassJar');

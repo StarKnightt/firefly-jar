@@ -35,8 +35,8 @@ const result = await page.evaluate(async () => {
       p.yaw += Math.max(-0.05, Math.min(0.05, wrap(wantYaw - p.yaw)));
       p.pitch += Math.max(-0.04, Math.min(0.04, wantPitch - p.pitch));
       const aimed = Math.abs(wrap(wantYaw - p.yaw)) < 0.05 && Math.abs(wantPitch - p.pitch) < 0.05;
-      g.controls.autopilot = { x: 0, y: flat > g.fireflies.reach - 1.0 ? 1 : 0, run: false };
-      if (aimed && flat < g.fireflies.reach - 0.4 && g.frame % 20 === 0) {
+      g.controls.autopilot = { x: 0, y: flat > g.fireflies.reach - 0.45 ? 1 : 0, run: false };
+      if (aimed && flat < g.fireflies.reach - 0.1 && g.frame % 20 === 0) {
         const r = g.flow.tryCatch(0, 0, false);
         if (r === 'caught') { log.catches.push({ t: +g.time.toFixed(1), tod: +g.tod.value.toFixed(2) }); target = null; }
         else if (r === 'far') log.far++; else log.misses++;

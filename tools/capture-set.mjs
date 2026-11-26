@@ -48,9 +48,9 @@ for (const v of views) {
         p.yaw += Math.max(-0.035, Math.min(0.035, wrap(wantYaw - p.yaw)));
         p.pitch += Math.max(-0.03, Math.min(0.03, wantPitch - p.pitch));
         const aimed = Math.abs(wrap(wantYaw - p.yaw)) < 0.04 && Math.abs(wantPitch - p.pitch) < 0.04;
-        g.controls.autopilot = { x: 0, y: flat > g.fireflies.reach - 1.0 ? 1 : 0, run: false };
-        if (opts.stopBeforeCatch && aimed && flat < g.fireflies.reach - 0.5 && g.count === until - 1) break;
-        if (aimed && flat < g.fireflies.reach - 0.5 && g.frame % 30 === 0 && g.time - lastCatch > (opts.pace ?? 11)) { if (g.flow.tryCatch(0, 0, false) === 'caught') { target = null; lastCatch = g.time; } }
+        g.controls.autopilot = { x: 0, y: flat > g.fireflies.reach - 0.45 ? 1 : 0, run: false };
+        if (opts.stopBeforeCatch && aimed && flat < g.fireflies.reach - 0.1 && g.count === until - 1) break;
+        if (aimed && flat < g.fireflies.reach - 0.1 && g.frame % 30 === 0 && g.time - lastCatch > (opts.pace ?? 11)) { if (g.flow.tryCatch(0, 0, false) === 'caught') { target = null; lastCatch = g.time; } }
       } else g.controls.autopilot = { x: 0, y: 0.6 };
       if (guard % 4 === 0) g.step(dt); else g.update(dt);
     }

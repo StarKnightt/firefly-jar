@@ -250,7 +250,7 @@ export function createFarTrees(assets, tier) {
   }
   // Two shade trees beside the farmhouse.
   // A few to the west, where the sun goes down: their shadows reach right across the meadow.
-  [[-60, 6, 1.3], [-67, 35, 1.45], [-58, -23, 1.25], [-73, 52, 1.35], [-64, 21, 1.15], [-70, -6, 1.4]].forEach(([x, z, s], i) => spots[i % 3].push({ x, z, s, yaw: i * 1.7 }));
+  [[-60, 6, 1.3], [-67, 35, 1.45], [-58, -23, 1.25], [-73, 52, 1.35], [-78, 68, 1.15], [-70, -6, 1.4]].forEach(([x, z, s], i) => spots[i % 3].push({ x, z, s, yaw: i * 1.7 }));
   spots[0].push({ x: HOUSE.x - 13, z: HOUSE.z - 17, s: 1.15, yaw: 1.0 });
   spots[1].push({ x: HOUSE.x + 12, z: HOUSE.z - 6, s: 1.2, yaw: 2.4 });
   spots[2].push({ x: HOUSE.x + 15, z: HOUSE.z + 6.5, s: 0.9, yaw: 4.0 });

@@ -85,8 +85,8 @@ export function createDirector(game) {
     if (!f) { controls.autopilot = { x: 0, y: 0 }; return; }
     const a = aim(f.pos, dt);
     const reach = fireflies.reach;
-    controls.autopilot = { x: 0, y: a.flat > reach - 0.9 ? (a.err < 0.5 ? 1 : 0.4) : 0 };
-    if (a.err < 0.03 && a.flat < reach - 0.35 && cooldown <= 0) {
+    controls.autopilot = { x: 0, y: a.flat > reach - 0.45 ? (a.err < 0.5 ? 1 : 0.4) : 0 };
+    if (a.err < 0.03 && a.flat < reach - 0.1 && cooldown <= 0) {
       if (flow.tryCatch(0, 0, false) === 'caught') { queue.shift(); cooldown = 1.3; }
     }
   };

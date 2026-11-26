@@ -75,7 +75,7 @@ function glassMaterial(side, glowU, emboss, { inner = false } = {}) {
     const fres = pow(float(1.0).sub(nv), inner ? 3.4 : 2.4);
     const R = reflect(V.negate(), N);
     const env = skyReflect(R);
-    const spec = pow(saturate(dot(R, U.lightDir)), 240.0).mul(10.0).add(pow(saturate(dot(R, U.lightDir)), 26.0).mul(0.35));
+    const spec = pow(saturate(dot(R, U.lightDir)), 240.0).mul(3.2).add(pow(saturate(dot(R, U.lightDir)), 26.0).mul(0.12));
     const nvw = normalView;
     const body = smoothstep(0.012, 0.03, positionLocal.y).mul(smoothstep(0.125, 0.105, positionLocal.y));
     // Two soft window-like streaks down the body: the cue that says "glass".
@@ -208,8 +208,8 @@ function buildHand(root, side, nailMat) {
   for (const name of NAIL_BONES) {
     const thumb = name.startsWith('thumb');
     const nail = new THREE.Mesh(new THREE.SphereGeometry(1, 10, 8), nailMat);
-    nail.scale.set(thumb ? 0.0066 : 0.0052, 0.0021, thumb ? 0.0078 : 0.0064);
-    nail.position.set(0, thumb ? 0.0058 : 0.0049, thumb ? -0.012 : -0.0085);
+    nail.scale.set(thumb ? 0.0068 : 0.0054, 0.0024, thumb ? 0.0082 : 0.0068);
+    nail.position.set(0, thumb ? 0.0084 : 0.0072, thumb ? -0.014 : -0.011);
     nail.rotation.x = -0.1;
     hand.bones[name].add(nail);
   }
@@ -253,14 +253,14 @@ function skinMaterial(glowU) {
     const d = length(L);
     const Ld = L.div(d.max(0.001));
     const nl = dot(normalWorld, Ld);
-    const atten = float(1.0).div(d.mul(d).mul(34.0).add(1.0));
+    const atten = float(1.0).div(d.mul(d).mul(60.0).add(1.0));
     const lit = saturate(nl.mul(0.96).add(0.04)).mul(atten);
     const through = saturate(nl.negate().mul(0.8).add(0.3)).mul(float(1.0).div(d.mul(d).mul(420.0).add(1.0))).mul(0.16);
     // The low sun rims the hands, as it does everything else in the meadow.
     const V = normalize(cameraPosition.sub(positionWorld));
     const rim = pow(float(1.0).sub(saturate(dot(normalWorld, V))), 3.0).mul(saturate(dot(normalWorld, U.sunDir).mul(0.6).add(0.4))).mul(U.trans).mul(0.5);
     const skin = vec3(0.86, 0.55, 0.40);
-    return skin.mul(U.jarCol).mul(lit).mul(glowU).mul(2.0).add(vec3(1.0, 0.16, 0.05).mul(through).mul(glowU)).add(U.sunCol.mul(rim));
+    return skin.mul(U.jarCol).mul(lit).mul(glowU).mul(0.95).add(vec3(1.0, 0.16, 0.05).mul(through).mul(glowU)).add(U.sunCol.mul(rim).mul(1.6));
   })();
   return mat;
 }
@@ -284,6 +284,16 @@ export function createRig(game) {
     const d = length(L);
     return vec3(0.95, 0.7, 0.55).mul(U.jarCol).mul(saturate(dot(normalWorld, L.div(d.max(0.001))).mul(0.8).add(0.2))).mul(float(1.0).div(d.mul(d).mul(70.0).add(1.0))).mul(glowU).mul(2.0);
   })();
+  // Faded red and cream stripes, the same shirt you see when you look down.
+  const sleeveMat = new THREE.MeshStandardNodeMaterial({ roughness: 0.95 });
+  sleeveMat.colorNode = Fn(() => {
+    const stripe = smoothstep(0.44, 0.56, fract(positionLocal.y.mul(21.0)));
+    const fold = sin(positionLocal.y.mul(140.0).add(positionLocal.x.mul(60.0))).mul(0.05).add(0.95);
+    return vec4(mix(vec3(0.62, 0.13, 0.12), vec3(0.8, 0.76, 0.66), stripe).mul(fold), 1.0);
+  })();
+  sleeveMat.emissiveNode = jarLight(positionWorld, normalWorld, float(0.2)).min(vec3(1.3)).mul(vec3(0.6, 0.4, 0.3)).mul(0.8);
+  const cuffMat = new THREE.MeshStandardNodeMaterial({ roughness: 0.95, color: 0x8f1f1c });
+  cuffMat.emissiveNode = jarLight(positionWorld, normalWorld, float(0.2)).min(vec3(1.3)).mul(vec3(0.5, 0.12, 0.1)).mul(0.8);
   const hands = {};
   for (const side of ['L', 'R']) {
     const src = side === 'L' ? assets.models.handL : assets.models.handR;
@@ -298,9 +308,16 @@ export function createRig(game) {
     hands[side] = h;
 
     // Forearm running back out of frame.
-    const fore = new THREE.Mesh(new THREE.CylinderGeometry(0.0178, 0.03, 0.34, 20, 6, false), skin);
-    fore.geometry.translate(0, -0.17, 0);
-    fore.scale.set(1.0, 1, 0.8);
+    const fore = new THREE.Group();
+    const wristSkin = new THREE.Mesh(new THREE.CylinderGeometry(0.0176, 0.0196, 0.06, 18, 1, false), skin);
+    wristSkin.geometry.translate(0, -0.03, 0);
+    wristSkin.scale.set(1.0, 1, 0.8);
+    const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.0235, 0.037, 0.3, 22, 8, false), sleeveMat);
+    sleeve.geometry.translate(0, -0.045 - 0.15, 0);
+    sleeve.scale.set(1.0, 1, 0.84);
+    const cuff = new THREE.Mesh(new THREE.TorusGeometry(0.0232, 0.0042, 8, 24), cuffMat);
+    cuff.rotation.x = Math.PI / 2; cuff.position.y = -0.046; cuff.scale.set(1, 0.84, 1);
+    fore.add(wristSkin, sleeve, cuff);
     h.forearm = fore;
     hold.add(fore);
 
@@ -335,10 +352,10 @@ export function createRig(game) {
     // Right hand on the lid: palm down over it, fingertips on the far rim, thumb on the near rim.
     lid: { x: 0.062, y: 0.034, z: 0.016, yaw: 1.35, pitch: -0.18, roll: Math.PI / 2 },
     lidCurl: {
-      thumb: [0.25, 0.3, 0.35], index: [0, 0.55, 0.6, 0.4], middle: [0, 0.6, 0.62, 0.4],
-      ring: [0, 0.62, 0.64, 0.42], pinky: [0, 0.64, 0.66, 0.45],
+      thumb: [0.3, 0.42, 0.5], index: [0, 0.8, 0.8, 0.5], middle: [0, 0.84, 0.82, 0.5],
+      ring: [0, 0.86, 0.84, 0.52], pinky: [0, 0.88, 0.86, 0.55],
     },
-    lidSpread: { index: 0.16, middle: 0.04, ring: -0.1, pinky: -0.24, thumb: 0.25 },
+    lidSpread: { index: 0.1, middle: 0.02, ring: -0.06, pinky: -0.14, thumb: 0.3 },
   };
   const qa = new THREE.Quaternion(), qb = new THREE.Quaternion(), qc = new THREE.Quaternion(), qd = new THREE.Quaternion();
   const X = new THREE.Vector3(1, 0, 0), Y = new THREE.Vector3(0, 1, 0), Z = new THREE.Vector3(0, 0, 1), DOWN = new THREE.Vector3(0, -1, 0);
@@ -369,7 +386,7 @@ export function createRig(game) {
     // The lid: sits on the jar, rises with the hand for a catch, and at the end is carried off to the side.
     const c = state.carry;
     jar.lid.position.set(c * 0.17, LID_Y + state.lidLift * 0.034 + Math.sin(Math.min(1, c * 2.2) * Math.PI) * 0.018 - c * c * 0.42, c * 0.06 - state.lidLift * 0.006);
-    jar.lid.rotation.set(-state.lidLift * 0.5 - c * 0.5, state.lidTwist, c * 0.9, 'YXZ');
+    jar.lid.rotation.set(-state.lidLift * 0.35 - c * 0.12, state.lidTwist, c * 0.2, 'YXZ');
     jar.lid.visible = c < 0.97;
 
     for (const side of ['L', 'R']) {
@@ -402,7 +419,7 @@ export function createRig(game) {
       const sx = side === 'L' ? -1 : 1;
       elbow.set(sx * THREE.MathUtils.lerp(0.21, 0.13, state.tall), THREE.MathUtils.lerp(-0.43, -0.52, state.tall) - state.elbowDrop, THREE.MathUtils.lerp(0.02, 0.1, state.tall));
       // Reaching for the lid the arm comes in level from the side, not up past the face.
-      if (side === 'R' && k > 0.001) elbow.lerp(dir.set(0.34 + state.carry * 0.12, -0.42, -0.37), k);
+      if (side === 'R' && k > 0.001) elbow.lerp(dir.set(0.19 + state.carry * 0.1, -0.62, -0.41), k);
       dir.copy(elbow).sub(tgt).normalize();
       h.forearm.position.copy(tgt).addScaledVector(dir, -0.012);
       h.forearm.quaternion.setFromUnitVectors(DOWN, dir);
@@ -446,9 +463,9 @@ export function createRig(game) {
       if (state.catchT >= 0) {
         state.catchT += dt;
         const t = state.catchT;
-        state.handK = Math.max(span(t, 0.0, 0.15) * (1 - span(t, 0.84, 1.02)), 0);
-        state.lidLift = span(t, 0.1, 0.26) * (1 - span(t, 0.68, 0.82));
-        if (t > 1.04) { state.catchT = -1; state.handK = 0; state.lidLift = 0; }
+        state.handK = Math.max(span(t, 0.0, 0.13) * (1 - span(t, 0.78, 0.94)), 0);
+        state.lidLift = span(t, 0.09, 0.22) * (1 - span(t, 0.66, 0.78));
+        if (t > 0.96) { state.catchT = -1; state.handK = 0; state.lidLift = 0; }
       }
       // The ending: the same hand unscrews the lid and takes it away.
       if (state.open) {

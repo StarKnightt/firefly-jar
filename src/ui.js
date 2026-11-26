@@ -20,7 +20,11 @@ export function createUI(game, { onBegin, onResume, onAgain, onMute, fireflyAt, 
     const data = { title: 'Firefly Jar', text: 'This reminded me of being eight. Catch fireflies in a jar, then let them go.', url };
     try {
       el.share.textContent = 'sharing\u2026';
-      if (navigator.share) { await navigator.share(data); el.share.textContent = 'sent'; return; }
+      if (navigator.share) {
+        // Some browsers never settle the share promise; don't leave the button hanging on it.
+        const done = await Promise.race([navigator.share(data).then(() => 'sent'), new Promise((r) => setTimeout(() => r('timeout'), 1500))]);
+        if (done === 'sent') { el.share.textContent = 'sent'; return; }
+      }
       await navigator.clipboard.writeText(url);
       el.share.textContent = 'link copied';
       return;
@@ -60,7 +64,12 @@ export function createUI(game, { onBegin, onResume, onAgain, onMute, fireflyAt, 
       hintTimer = setTimeout(() => el.hint.classList.remove('show'), seconds * 1000);
       return true;
     },
-    clearHint() { clearTimeout(hintTimer); el.hint.classList.remove('show'); hintUntil = 0; },
+    clearHint() {
+      // Gone at once, not faded: nothing from the game should hang over the ending.
+      clearTimeout(hintTimer); hintUntil = 0;
+      el.hint.style.transition = 'none'; el.hint.classList.remove('show'); void el.hint.offsetWidth; el.hint.style.transition = '';
+      el.hint.textContent = '';
+    },
     reticle(state, ringPx = 0) {
       if (el.reticle.className !== (state || '')) el.reticle.className = state || '';
       const px = Math.round(ringPx);

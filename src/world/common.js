@@ -62,6 +62,15 @@ export const GRASS_LUSH = new THREE.Color(0x4c8a2a);
 export const GRASS_DRY = new THREE.Color(0x7d8a2e);
 export const GRASS_TIP = new THREE.Color(0xa9b862);
 
+// The jar's light on the meadow: a round warm pool under the jar. Measured across the ground only,
+// so tall clumps and short ones are lit alike and the pool does not shift as you turn.
+export const jarPool = /*@__PURE__*/ Fn(([worldPos]) => {
+  const dv = worldPos.xz.sub(U.jarPos.xz);
+  const d2 = dot(dv, dv);
+  const atten = float(1.0).div(d2.mul(2.6).add(1.0)).mul(smoothstep(2.6, 0.9, length(dv)));
+  return U.jarCol.mul(U.jarInt).mul(atten).mul(0.25);
+});
+
 // Warm light of the jar. Not a scene light: it needs an artistic falloff so it can
 // pool on the grass at arm's length without burning out the hands holding it.
 // The porch light on the lawn. Worked out by hand rather than with a shadow-casting lamp: for a
