@@ -450,3 +450,23 @@ page errors.
   phone-sized touch screen).
 - Not checked: a physical phone. The phone results are from touch emulation at phone sizes on this
   PC, so frame rate on real phone hardware is not measured.
+
+## Frame rate, measured again after shipping
+
+Five more full runs of `node tools/perf.mjs --synced --built` to see whether the single 245 ms
+frame in the ending comes back.
+
+- Runs 1 and 2 were clean. Averages 90 to 106 fps in every scene; worst 1% 61 to 75 fps; the
+  ending had no frame over 20 ms in run 1 and one of 1203 in run 2 (19.1 ms at worst).
+- Runs 3 to 5 are not valid measurements and are not counted. Partway through, a second copy of
+  the game started on the same GPU: the desktop Chrome on this PC (not a test browser) opened at
+  17:03 and its GPU process was using about 93% of the RTX 4060 when I checked, on a 1920x1080
+  monitor that refreshes at about 200 Hz. With two copies sharing one card the test copy fell to
+  frames of 500 to 600 ms. Nothing of mine was left running; I did not touch that browser.
+- So of the five uncontended runs of the ending on the final build, four had no long frame and
+  one had a single frame of 245 ms. I could not make it happen again and have not found a cause
+  in the game.
+- In the night scene, two frames out of about 750 run over 20 ms in every run (23 to 36 ms).
+
+Worth knowing: the game is not frame-capped, so on a 200 Hz monitor it draws as fast as the card
+allows (about 100 fps at 1080p on the high tier) and keeps the GPU close to fully loaded.
