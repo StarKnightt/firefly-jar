@@ -46,15 +46,23 @@ function fail(msg) {
   document.getElementById('failmsg').textContent = msg;
   document.getElementById('fail').classList.add('show');
   document.getElementById('title').classList.remove('show');
+  window.__load?.fail();
 }
+
+// The loading screen lights one firefly per step (twenty in all); see index.html.
+const loadStep = (n) => window.__load?.set(n);
+// Let the browser draw between the heavy steps, so the jar is seen filling.
+const breathe = () => (DET ? Promise.resolve() : new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0))));
 
 async function boot() {
   const renderer = new THREE.WebGPURenderer({
     canvas, antialias: game.tier.samples > 1, powerPreference: 'high-performance',
     forceWebGL: params.has('webgl'),
   });
+  loadStep(2);
   await renderer.init();
   game.renderer = renderer;
+  loadStep(4);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -81,8 +89,9 @@ async function boot() {
   game.camera = camera;
   scene.add(camera);
 
-  const assets = await loadAssets(renderer, game.tier);
+  const assets = await loadAssets(renderer, game.tier, (k) => loadStep(4 + k * 10));
   game.assets = assets;
+  await breathe();
 
   // ---- world ----
   scene.fogNode = createFogNode();
@@ -96,6 +105,9 @@ async function boot() {
   scene.add(createFarFlies(game.tier.farflies));
   game.oak = oak; game.house = house;
   game.updaters.push(() => { oak.update(game.time); house.update(game.time, game.tod.value); });
+
+  loadStep(16);
+  await breathe();
 
   const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
   scene.add(hemi);
@@ -300,17 +312,21 @@ async function boot() {
   };
 
   game.phase = 'title';
+  loadStep(17);
+  await breathe();
   // Warm up before the button wakes: compile every pipeline and push a few real frames through
   // the GPU, so the first step into the meadow is smooth instead of a stall.
   try { await renderer.compileAsync(scene, camera); } catch { /* falls back to compiling on first draw */ }
+  loadStep(19);
+  await breathe();
   for (let i = 0; i < 5; i++) { game.update(1 / 60); game.render(); await game.settle(); }
   last = performance.now();
   game.ready = true;
   // The trailer director is only ever loaded for recording.
   if (params.has('trailer')) game.director = (await import('./director.js')).createDirector(game);
-  ui.ready();
-  if (params.has('autostart')) flow.begin();
-  document.documentElement.classList.add('ready');
+  // The meadow is ready behind the loading screen: let the jar finish filling, then fade into it.
+  const reveal = () => { last = performance.now(); ui.ready(); if (params.has('autostart')) flow.begin(); document.documentElement.classList.add('ready'); };
+  if (window.__load) window.__load.done(reveal); else reveal();
 }
 
 boot().catch((e) => {

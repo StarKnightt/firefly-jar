@@ -3,7 +3,11 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 const base = import.meta.env.BASE_URL + 'assets/';
 
-export async function loadAssets(renderer, tier) {
+export async function loadAssets(renderer, tier, onProgress = () => {}) {
+  // Twenty files in all; each one that lands is reported.
+  let landed = 0;
+  const TOTAL = 20;
+  const tick = (v) => { onProgress(++landed / TOTAL); return v; };
   const tl = new THREE.TextureLoader();
   const gl = new GLTFLoader();
   const aniso = Math.min(8, renderer.getMaxAnisotropy?.() || 4);
@@ -13,6 +17,7 @@ export async function loadAssets(renderer, tier) {
     t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
     if (repeat) t.wrapS = t.wrapT = THREE.RepeatWrapping;
     t.anisotropy = aniso;
+    tick();
     return t;
   };
   const set = async (dir) => {
@@ -23,7 +28,7 @@ export async function loadAssets(renderer, tier) {
     ]);
     return { diff, nor, rough };
   };
-  const model = (path) => gl.loadAsync(base + path).then((g) => g.scene);
+  const model = (path) => gl.loadAsync(base + path).then((g) => tick(g.scene));
 
   const [ground, bark, planks, greyPlanks, roof, leaf, handL, handR, tyre, chair] = await Promise.all([
     set('leafy_grass'), set('jolcham_oak_bark_01'), set('weathered_planks'), set('wood_planks_grey'), set('roof_slates_02'),

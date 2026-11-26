@@ -319,7 +319,7 @@ export class AudioEngine {
 }
 
 // Render a soundtrack from a list of timed events with the same engine.
-export async function renderOffline({ duration, events, sampleRate = 48000 }) {
+export async function renderOffline({ duration, events, sampleRate = 48000, musicStart = 0.05 }) {
   const ctx = new OfflineAudioContext(2, Math.ceil(duration * sampleRate), sampleRate);
   const eng = new AudioEngine();
   await eng.start(ctx);
@@ -337,7 +337,7 @@ export async function renderOffline({ duration, events, sampleRate = 48000 }) {
     else if (e.type === 'gain') eng.master.gain.setTargetAtTime(e.v, t, e.tc || 0.5);
   }
   const fin = sorted.find((e) => e.type === 'finale');
-  eng.nextBeat = 0.05;
+  eng.nextBeat = musicStart;
   eng.scheduleLoops(duration + 1);
   // Music stops being scheduled at the finale, then the finale takes over.
   eng.scheduleMusic(fin ? fin.t : duration);

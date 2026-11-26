@@ -1,5 +1,6 @@
 // Trailer director (only loaded with ?trailer). Plays the game in fixed steps with an autopilot
-// that walks, aims and clicks like a player, cuts between three moments of the evening, shows
+// that walks, aims and clicks like a player, opens on the full jar at night, then cuts between
+// three moments of the evening in order, shows
 // the text cards, and logs sound events on the film's clock so the soundtrack can be rendered
 // to match. Nothing here fakes a picture: every frame is the game drawing itself.
 import * as THREE from 'three/webgpu';
@@ -8,7 +9,11 @@ import { renderOffline } from './audio.js';
 
 const FPS = 60;
 const DURATION = 45.0;
-const CUT_DUSK = 13.55, CUT_NIGHT = 20.3; // on bar lines of the music (2.25 s bars from 0.05)
+// The cut opens on three seconds of the jar at night with no words on screen, then the evening
+// runs in order. The music box comes in at 0.75 s so that every cut lands on one of its bar
+// lines (2.25 s bars: 3.0, 12.0, 18.75).
+const OPEN = 3.0, MUSIC_START = 0.75;
+const CUT_DUSK = 12.0, CUT_NIGHT = 18.75;
 
 const wrap = (a) => { while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI) a += Math.PI * 2; return a; };
 const clamp = THREE.MathUtils.clamp;
@@ -20,6 +25,16 @@ export function createDirector(game) {
   let shot = -1, targets = [], cooldown = 0, lastTodLog = -1, filmT = 0;
   const lead = new THREE.Vector3();
 
+  // A close view for the opening: draw only part of the full frame, at full resolution.
+  const zoom = (z, cx = 0.5, cy = 0.5) => {
+    const w = window.innerWidth, h = window.innerHeight;
+    if (z <= 1.001) game.camera.clearViewOffset();
+    else game.camera.setViewOffset(w, h, cx * w - w / z / 2, cy * h - h / z / 2, w / z, h / z);
+  };
+  // The counter and the aiming dot are hidden while the opening plays: no words at all there.
+  const chrome = (on) => { for (const id of ['hud', 'reticle']) document.getElementById(id).style.visibility = on ? '' : 'hidden'; };
+  const END_CARD = 40.8;
+
   // ---- text cards ----
   const layer = document.createElement('div');
   layer.id = 'cards';
@@ -27,12 +42,11 @@ export function createDirector(game) {
   document.getElementById('ui').appendChild(layer);
   const shadow = 'text-shadow:0 3px 30px rgba(40,16,0,.8),0 0 5px rgba(40,16,0,.55),0 0 70px rgba(255,196,96,.35);';
   const CARDS = [
-    { a: 0.9, b: 4.9, y: 12, html: `<div style="font-size:176px;line-height:.9;font-weight:600;${shadow}">Firefly Jar</div><div style="font:italic 380 36px 'Fraunces Variable',Georgia,serif;margin-top:14px;${shadow}">one summer evening, a long time ago</div>` },
-    { a: 6.2, b: 9.8, y: 15, html: `<div style="font-size:96px;font-weight:600;${shadow}">catch fireflies before night falls</div>` },
-    { a: 14.1, b: 17.6, y: 15, html: `<div style="font-size:96px;font-weight:600;${shadow}">every one makes the jar glow brighter</div>` },
-    { a: 20.9, b: 24.3, y: 15, html: `<div style="font-size:96px;font-weight:600;${shadow}">playable on your phone</div>` },
-    { a: 31.4, b: 35.0, y: 13, html: `<div style="font-size:96px;font-weight:600;${shadow}">fill the jar, then let them go</div>` },
-    { a: 40.4, b: 99, y: 66, html: `<div style="font-size:150px;line-height:.9;font-weight:600;${shadow}">Firefly Jar</div><div style="font:italic 380 36px 'Fraunces Variable',Georgia,serif;margin-top:18px;${shadow}">play it free in your browser</div><div style="font:500 30px 'Fraunces Variable',Georgia,serif;letter-spacing:.03em;margin-top:14px;opacity:.9;${shadow}">starknightt.github.io/firefly-jar</div>` },
+    { a: -9, b: -8, y: 12, html: `<div style="font-size:176px;line-height:.9;font-weight:600;${shadow}">Firefly Jar</div><div style="font:italic 380 36px 'Fraunces Variable',Georgia,serif;margin-top:14px;${shadow}">one summer evening, a long time ago</div>` },
+    { a: 4.4, b: 7.4, y: 15, html: `<div style="font-size:96px;font-weight:600;${shadow}">catch fireflies before night falls</div>` },
+    { a: 12.6, b: 15.4, y: 15, html: `<div style="font-size:96px;font-weight:600;${shadow}">playable on your phone</div>` },
+    { a: 27.6, b: 30.4, y: 13, html: `<div style="font-size:96px;font-weight:600;${shadow}">then let them go</div>` },
+    { a: END_CARD, b: 99, y: 66, html: `<div style="font-size:150px;line-height:.9;font-weight:600;${shadow}">Firefly Jar</div><div style="font:italic 380 36px 'Fraunces Variable',Georgia,serif;margin-top:18px;${shadow}">play it free in your browser</div><div style="font:500 30px 'Fraunces Variable',Georgia,serif;letter-spacing:.03em;margin-top:14px;opacity:.9;${shadow}">starknightt.github.io/firefly-jar</div>` },
   ];
   const cardEls = CARDS.map((c) => {
     const el = document.createElement('div');
@@ -94,10 +108,37 @@ export function createDirector(game) {
     }
   };
 
+  const NIGHT_OPEN = { x: -12, z: -8.5, yaw: 0.36, pitch: 0.1 };
   const SHOTS = [
     {
+      // The jar at night, nearly full, fireflies in it and around it. No words.
       start: 0,
       enter() {
+        game.todLock = true;
+        game.debugState({ tod: 0.95, count: 19, lift: 0.5 });
+        pose(NIGHT_OPEN.x, NIGHT_OPEN.z, NIGHT_OPEN.yaw, NIGHT_OPEN.pitch);
+        // Close round the jar and out across the meadow: [distance, side, height, flash phase].
+        stage(NIGHT_OPEN, [
+          [1.7, -0.62, 1.02, 0.05], [2.0, 0.7, 1.2, 0.5], [2.6, -0.2, 1.42, 0.8], [2.9, 1.25, 0.95, 0.25], [3.3, -1.3, 1.3, 0.62],
+          [4.2, 0.35, 1.55, 0.38], [5.0, -1.9, 1.05, 0.9], [5.6, 1.9, 1.35, 0.15], [7.5, -0.6, 1.5, 0.7], [9.0, 2.8, 1.1, 0.45],
+        ]);
+        chrome(false);
+      },
+      update(t, dt) {
+        controls.autopilot = { x: 0, y: 0 };
+        // Hold still, breathe, and drift in on the jar.
+        p.yaw = NIGHT_OPEN.yaw + Math.sin(t * 0.7) * 0.01;
+        p.pitch = NIGHT_OPEN.pitch + Math.sin(t * 0.9 + 1) * 0.004;
+        zoom(1.5 + 0.22 * ease(t / OPEN), 0.5, 0.71);
+        // The near ones stay calm for the camera and keep a soft glow between flashes.
+        for (const f of targets) { f.spook = 0; f.pulse = Math.max(f.pulse, 0.22); }
+      },
+    },
+    {
+      start: OPEN,
+      enter() {
+        zoom(1); chrome(true);
+        game.debugState({ lift: 0 });
         game.todLock = false; game.todTarget = 0.03; game.tod.set(0.03);
         game.debugState({ count: 0 });
         pose(START.x, START.z, START_YAW, -0.045);
@@ -108,12 +149,12 @@ export function createDirector(game) {
         this.queue = [targets[0], targets[1], targets[2]];
       },
       update(t, dt) {
-        if (t < 4.5) {
-          // The opening: stand in the evening for a breath, then start to wander in.
-          controls.autopilot = { x: 0, y: t > 2.0 ? 0.4 : 0 };
+        if (t < 1.3) {
+          // Stand in the golden evening for a breath, then start to wander in.
+          controls.autopilot = { x: 0, y: t > 0.5 ? 0.4 : 0 };
           p.yaw = START_YAW + Math.sin(t * 0.5) * 0.012;
           p.pitch += (-0.03 - p.pitch) * dt * 0.8;
-        } else chase(dt, this.queue, 2.5);
+        } else chase(dt, this.queue, 1.9);
       },
     },
     {
@@ -143,7 +184,7 @@ export function createDirector(game) {
       update(t, dt) {
         if (game.phase !== 'play') { controls.autopilot = { x: 0, y: 0 }; return; }
         // First look at the light the jar throws on your hands and the grass, then go after the last three.
-        if (t < 1.9) { controls.autopilot = { x: 0, y: 0.3 }; p.pitch += (-0.52 - p.pitch) * dt * 2; p.yaw += Math.sin(t * 1.2) * 0.0012; } else chase(dt, this.queue, 0.95);
+        if (t < 1.9) { controls.autopilot = { x: 0, y: 0.3 }; p.pitch += (-0.52 - p.pitch) * dt * 2; p.yaw += Math.sin(t * 1.2) * 0.0012; } else chase(dt, this.queue, 1.5);
       },
     },
   ];
@@ -153,7 +194,7 @@ export function createDirector(game) {
   const warp = () => {
     if (game.phase !== 'ending' && game.phase !== 'done') return 1;
     const t = flow.state.endT;
-    return t < 4.5 ? 1.2 : t < 12.5 ? 1.5 : t < 23.5 ? 2.3 : 1;
+    return t < 4.5 ? 1.05 : t < 12.5 ? 1.3 : t < 23.5 ? 1.9 : 1;
   };
 
   const tick = (i) => {
@@ -178,6 +219,7 @@ export function createDirector(game) {
       game.filmClock = () => filmT;
       game.time = 0; game.frame = 0;
       shot = -1; lastTodLog = -1; filmT = 0;
+      zoom(1); chrome(true);
       // A clean evening every time prepare() is called.
       game.phase = 'title';
       game.count = 0;
@@ -219,7 +261,8 @@ export function createDirector(game) {
 
     thumbnail() {
       api.prepare();
-      for (let i = 0; i < 50; i++) { const { dt } = tick(i); game.step(dt); }
+      const from = Math.round(OPEN * FPS);
+      for (let i = from; i < from + 50; i++) { const { dt } = tick(i); game.step(dt); }
       // The poster frame: a few already in the jar, and the nearest ones caught mid-flash.
       game.debugState({ count: 5 });
       stage({ x: START.x, z: START.z, yaw: START_YAW }, [
@@ -242,8 +285,10 @@ export function createDirector(game) {
     async renderAudio() {
       // Music cues follow the cut rather than the literal count, so the melody is whole from the first bar.
       const cues = [{ t: 0, type: 'count', n: 6 }, { t: CUT_DUSK, type: 'count', n: 12 }, { t: CUT_NIGHT, type: 'count', n: 17 }];
+      // Whatever the opening and the first cut logged as the count changing is not a catch.
+      game.audioLog = game.audioLog.filter((e) => !(e.t < OPEN + 0.02 && (e.type === 'chime' || e.type === 'lid')));
       const events = game.audioLog.filter((e) => e.type !== 'count').concat(cues, [{ t: DURATION - 1.4, type: 'gain', v: 0, tc: 0.4 }]);
-      const blob = await renderOffline({ duration: DURATION, events });
+      const blob = await renderOffline({ duration: DURATION, events, musicStart: MUSIC_START });
       const bytes = new Uint8Array(await blob.arrayBuffer());
       let bin = '';
       for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));

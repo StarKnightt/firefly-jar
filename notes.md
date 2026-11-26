@@ -558,3 +558,22 @@ On the live link after this change: `tools/phonepaths.mjs --url` passes all 15 c
 Checked by the owner on their own phone on 2026-11-26, on the live link: it loaded, the stick and
 drag-to-look worked, a firefly was caught, and it felt smooth enough. (Reported by them; the phone
 model and frame rate were not recorded.)
+
+## After shipping: loading screen and trailer recut
+
+- **Loading screen.** Deep dusk blue, a small mason jar in thin warm lines, "Firefly Jar" in the
+  game's handwriting and "waiting for dusk…" under it. No bar, percent or spinner: the jar is the
+  progress. One firefly lights for each of twenty real steps of loading (the renderer, each of
+  the twenty files, the world, the shader warm-up), bottom of the jar first, and the jar's own
+  glow grows with them. They arrive one at a time even when the steps come in a burst. When the
+  meadow is ready the jar and words fade first, then the blue lifts off the title view. It is
+  inline in `index.html` with its two fonts preloaded, so it is on screen in about 0.2 s, before
+  any script has arrived. `tools/loadershot.mjs` loads the page over a throttled connection and
+  checks and photographs it at 1920x1080, 390x844 and 844x390.
+- **Trailer, recut for X.** Opens on three seconds of the nearly full jar at night with fireflies
+  in and around it and nothing written on screen (the counter is hidden too), then golden hour,
+  dusk, night, the release and the constellation in order. The title is on the end card only.
+  Three short cards instead of four: "catch fireflies before night falls", "playable on your
+  phone", "then let them go". Still 45.0 s, 1920x1080, 60 fps, H.264 (NVENC), same soundtrack; the
+  music box comes in at 0.75 s so the cuts at 3.0, 12.0 and 18.75 s land on its bar lines.
+  `thumbnail.png` is unchanged (the golden-hour title frame).
