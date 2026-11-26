@@ -505,3 +505,20 @@ than they said.)
 
 The two slow frames in the night scene come back every run, so they are the game's or the test's
 (the test jumps straight to night with 19 in the jar); at 23 to 27 ms each I have left them.
+
+## One whole game, every frame
+
+`node tools/perf-play.mjs --built`: a bot plays from the first step into the meadow to the end card
+in real time at 1920x1080 on the RTX 4060 (production build, high tier, WebGPU), with the GPU
+queue drained every frame. GPU otherwise idle (4% before the run).
+
+- 8,159 frames in 79 s; 20 caught, 20 released, end card reached.
+- Average 103.5 fps. Worst 1% of frames 72 fps. p99 12.6 ms, p99.9 17.2 ms.
+- Slowest single frame 23 ms (on the end card). No frame over 33 ms.
+- 10 frames of 8,159 (0.12%) ran over the 16.7 ms budget, by 0.1 to 6 ms, spread through the game;
+  in each the page's own work was 1.4 to 2.3 ms.
+
+The two slow frames the four-scene test shows in its night scene do not appear when the night
+scene is measured on a freshly loaded page (`tools/perf-slow.mjs --scene night`: 0, 1 and 0 frames
+over 16.7 ms in three runs, the one at 16.9 ms). They come from that test jumping from dusk with
+10 in the jar straight to night with 19.
