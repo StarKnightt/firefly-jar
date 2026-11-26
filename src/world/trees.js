@@ -251,7 +251,7 @@ export function createFarTrees(assets, tier) {
   // Two shade trees beside the farmhouse.
   // A few to the west, where the sun goes down: their shadows reach right across the meadow.
   [[-60, 6, 1.3], [-67, 35, 1.45], [-58, -23, 1.25], [-73, 52, 1.35], [-64, 21, 1.15], [-70, -6, 1.4]].forEach(([x, z, s], i) => spots[i % 3].push({ x, z, s, yaw: i * 1.7 }));
-  spots[0].push({ x: HOUSE.x - 11.5, z: HOUSE.z - 2, s: 1.15, yaw: 1.0 });
+  spots[0].push({ x: HOUSE.x - 13, z: HOUSE.z - 17, s: 1.15, yaw: 1.0 });
   spots[1].push({ x: HOUSE.x + 12, z: HOUSE.z - 6, s: 1.2, yaw: 2.4 });
   spots[2].push({ x: HOUSE.x + 15, z: HOUSE.z + 6.5, s: 0.9, yaw: 4.0 });
 
@@ -295,9 +295,10 @@ export function createFarTrees(assets, tier) {
       }
       const hedgeMesh = new THREE.InstancedMesh(tree.leafGeometry, leafMaterial(assets.tex.leaf, { tint: 0x6f8454, sway: 3 }), hedge.length);
       hedge.forEach((s, i) => {
-        dummy.position.set(s.x, farHeight(s.x, s.z) - 0.5, s.z);
+        // Sunk into the ground so only the crown shows: a bush, with leaves the right size.
+        dummy.position.set(s.x, farHeight(s.x, s.z) - 1.2 - s.h * 2.2, s.z);
         dummy.rotation.set(0, s.yaw, 0);
-        dummy.scale.set(v.scale * 1.7 * s.s, v.scale * s.h, v.scale * 1.7 * s.s);
+        dummy.scale.setScalar(v.scale * (0.55 + s.h * 0.75) * s.s);
         dummy.updateMatrix();
         hedgeMesh.setMatrixAt(i, dummy.matrix);
       });

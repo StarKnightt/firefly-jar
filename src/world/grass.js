@@ -9,7 +9,7 @@ import {
 } from 'three/tsl';
 import { U } from '../tod.js';
 import { heightAtNode } from './layout.js';
-import { hash21, hash22, vnoise, patchNoise, yardMask, dirtMask, jarLight, flyLight, GRASS_ROOT, GRASS_LUSH, GRASS_DRY, GRASS_TIP } from './common.js';
+import { hash21, hash22, vnoise, patchNoise, yardMask, dirtMask, jarLight, flyLight, porchPool, GRASS_ROOT, GRASS_LUSH, GRASS_DRY, GRASS_TIP } from './common.js';
 
 const c3 = (c) => vec3(c.r, c.g, c.b);
 
@@ -41,7 +41,7 @@ function tuftGeometry({ blades, segments, radius, width, seed, plume = false }) 
     for (let s = 0; s <= segments; s++) {
       const t = s / segments;
       // A seed stalk is a bare stem that swells into a feathery head near the top.
-      const head = Math.exp(-Math.pow((t - 0.84) / 0.11, 2));
+      const head = Math.exp(-Math.pow((t - 0.8) / 0.14, 2));
       const half = plume ? (s === segments ? 0.0003 : w * (0.22 + 1.9 * head))
         : w * (1 - Math.pow(t, 1.6)) * (s === segments ? 0 : 1) + (s === segments ? 0.0006 : 0);
       const fwd = lean * t * t;      // blade curls forward as it rises
@@ -131,8 +131,8 @@ function grassMaterial({ gridN, size, bladeHeight, innerHole, salt, wide, plume 
   // The player wades through: blades lean away from the body.
   const away = world.sub(U.camPos.xz);
   const awayLen = length(away).max(0.001);
-  const push = float(1.0).sub(smoothstep(0.18, 0.95, awayLen));
-  const pushVec = away.div(awayLen).mul(push).mul(0.55);
+  const push = float(1.0).sub(smoothstep(0.14, 0.6, awayLen));
+  const pushVec = away.div(awayLen).mul(push).mul(0.42);
 
   const offXZ = windDir.mul(bend).mul(t2).add(pushVec.mul(t)).mul(H);
   const droop = saturate(bend.mul(bend).mul(0.9).add(push.mul(0.35))).mul(t2);
@@ -156,12 +156,12 @@ function grassMaterial({ gridN, size, bladeHeight, innerHole, salt, wide, plume 
   albedo = mix(albedo, tip, smoothstep(plume ? 0.6 : 0.45, plume ? 0.78 : 1.0, t));
   albedo = mix(albedo, vec3(0.22, 0.36, 0.11), yard.mul(0.8));
   // Self-shadowing down in the thatch.
-  const ao = mix(0.06, 1.0, smoothstep(0.08, 0.85, t));
+  const ao = mix(0.035, 1.0, smoothstep(0.12, 0.9, t));
 
   // Low sun shining through thin blades: brightest looking into the light.
   const viewDir = normalize(worldPos.sub(U.camPos));
   const into = pow(saturate(dot(viewDir, U.sunDir).mul(0.5).add(0.5)), 3.0);
-  const through = into.mul(U.trans).mul(smoothstep(0.1, 0.9, t)).mul(plume ? 1.4 : 1.2);
+  const through = into.mul(U.trans).mul(smoothstep(0.1, 0.9, t)).mul(plume ? 1.7 : 1.7);
   // Lit from the front the low sun turns the field orange-gold; lit from behind the blades glow yellow-green.
   const frontWarm = mix(vec3(1.0), vec3(1.22, 0.9, 0.5), U.trans.mul(float(1.0).sub(into)).mul(0.45));
   const lit = albedo.mul(frontWarm).mul(ao).mul(float(1.0).add(through)).add((plume ? vec3(1.0, 0.72, 0.3) : vec3(0.58, 0.74, 0.05)).mul(through).mul(plume ? 0.2 : 0.2));
@@ -180,10 +180,11 @@ function grassMaterial({ gridN, size, bladeHeight, innerHole, salt, wide, plume 
   const toJar = normalize(U.jarPos.sub(worldPos));
   const toCam = normalize(U.camPos.sub(worldPos));
   const lee = smoothstep(-0.5, 0.3, dot(toJar, toCam));
-  const warmAlbedo = mix(albedo, vec3(dot(albedo, vec3(0.34))), 0.4).mul(vec3(1.12, 1.04, 0.5));
+  const warmAlbedo = mix(albedo, vec3(dot(albedo, vec3(0.34))), 0.55).mul(vec3(1.08, 1.0, 0.62));
   const jar = jarLight(worldPos, vec3(0.0, 1.0, 0.0), float(0.75)).mul(warmAlbedo).mul(mix(0.06, 1.0, smoothstep(0.05, 0.9, t)))
-    .mul(mix(0.06, 1.0, lee)).mul(mix(0.5, 1.3, rnd2)).mul(plume ? 0.45 : 1.25)
-    .add(flyLight(worldPos).mul(albedo).mul(smoothstep(0.2, 1.0, t)).mul(1.4));
+    .mul(mix(0.12, 1.0, lee)).mul(mix(0.4, 1.3, rnd2)).mul(plume ? 0.3 : 0.72)
+    .add(flyLight(worldPos).mul(albedo).mul(smoothstep(0.2, 1.0, t)).mul(1.4))
+    .add(porchPool(worldPos).mul(albedo).mul(mix(0.25, 1.0, t)).mul(2.6));
   mat.emissiveNode = varying(jar, 'vGrassJar');
 
   return mat;
@@ -253,7 +254,7 @@ function flowerMaterial({ gridN, size, salt, patchSeed, threshold }) {
   // Scattered, not planted: a third of the cells in a drift are simply empty.
   const vis = grows.mul(float(1.0).sub(smoothstep(R * 0.78, R * 0.98, dist))).mul(smoothstep(0.34, 0.36, hash21(worldCell.add(63.1))));
   const clump = vnoise(world.mul(0.55).add(4.0));
-  const scale = mix(0.7, 1.3, rnd).mul(mix(0.5, 1.3, clump)).mul(vis);
+  const scale = mix(0.7, 1.2, rnd).mul(mix(0.5, 1.0, clump)).mul(vis);
 
   const yaw = rnd.mul(6.2831853);
   const cy = cos(yaw), sy = sin(yaw);
@@ -302,15 +303,15 @@ export function createGrass(quality) {
   });
   // Seed stalks standing above the blades: the plumes that catch the low sun.
   {
-    const geo = tuftGeometry({ blades: 2, segments: 12, radius: 0.05, width: 0.0034, seed: 77, plume: true });
+    const geo = tuftGeometry({ blades: 2, segments: 7, radius: 0.05, width: 0.0034, seed: 77, plume: true });
     geo.instanceCount = quality.plumeN * quality.plumeN;
-    const mesh = new THREE.Mesh(geo, grassMaterial({ gridN: quality.plumeN, size: quality.plumeSize, bladeHeight: 0.98, innerHole: 0, salt: 91.0, wide: false, plume: true, keep: 0.34 }));
+    const mesh = new THREE.Mesh(geo, grassMaterial({ gridN: quality.plumeN, size: quality.plumeSize, bladeHeight: 0.98, innerHole: 0, salt: 91.0, wide: false, plume: true, keep: 0.5 }));
     mesh.frustumCulled = false; mesh.receiveShadow = true; mesh.castShadow = false; mesh.name = 'plumes';
     group.add(mesh);
   }
   // Wildflowers of a Midwest pasture.
   const species = [
-    { name: 'daisy', petals: 13, petalLen: 0.0135, petalWid: 0.0052, cup: 0.22, centre: 0.0048, stem: 0.40, petalCol: new THREE.Color(0xb9b7ad), centreCol: new THREE.Color(0xe0a516), patchSeed: 3.0, threshold: 0.55 },
+    { name: 'daisy', petals: 13, petalLen: 0.0135, petalWid: 0.0052, cup: 0.22, centre: 0.0048, stem: 0.40, petalCol: new THREE.Color(0xd2d0c6), centreCol: new THREE.Color(0xe0a516), patchSeed: 3.0, threshold: 0.5 },
     { name: 'susan', petals: 10, petalLen: 0.019, petalWid: 0.0075, cup: -0.12, centre: 0.0065, stem: 0.47, petalCol: new THREE.Color(0xd9930f), centreCol: new THREE.Color(0x2e1a0c), patchSeed: 21.0, threshold: 0.56 },
     { name: 'clover', petals: 7, petalLen: 0.0085, petalWid: 0.007, cup: 1.25, centre: 0.0065, stem: 0.30, petalCol: new THREE.Color(0xa85c96), centreCol: new THREE.Color(0xd98cc4), patchSeed: 47.0, threshold: 0.52 },
     { name: 'lace', petals: 12, petalLen: 0.024, petalWid: 0.010, cup: 0.10, centre: 0.009, stem: 0.56, petalCol: new THREE.Color(0xb4b4a8), centreCol: new THREE.Color(0xe4e6d6), patchSeed: 63.0, threshold: 0.58 },

@@ -19,9 +19,11 @@ export function createUI(game, { onBegin, onResume, onAgain, onMute, fireflyAt, 
     const url = location.href.split('?')[0];
     const data = { title: 'Firefly Jar', text: 'This reminded me of being eight. Catch fireflies in a jar, then let them go.', url };
     try {
-      if (navigator.share) { await navigator.share(data); return; }
+      el.share.textContent = 'sharing\u2026';
+      if (navigator.share) { await navigator.share(data); el.share.textContent = 'sent'; return; }
       await navigator.clipboard.writeText(url);
       el.share.textContent = 'link copied';
+      return;
     } catch { el.share.textContent = url.replace(/^https?:\/\//, ''); }
     setTimeout(() => { el.share.textContent = 'send to a friend'; }, 2600);
   });
@@ -63,6 +65,12 @@ export function createUI(game, { onBegin, onResume, onAgain, onMute, fireflyAt, 
       if (el.reticle.className !== (state || '')) el.reticle.className = state || '';
       const px = Math.round(ringPx);
       if (px && px !== el.reticle._px) { el.reticle._px = px; el.reticle.style.setProperty('--ring', px * 2 + 'px'); }
+    },
+    // A soft glow at the left or right edge, pointing toward the nearest firefly when none is in view.
+    guide(side) {
+      const g = document.getElementById('guide');
+      const cls = side < 0 ? 'left' : side > 0 ? 'right' : '';
+      if (g.className !== cls) g.className = cls;
     },
     // A reach that caught nothing: a soft ring where the hand went, so a miss is never silence.
     ripple(nx, ny) {

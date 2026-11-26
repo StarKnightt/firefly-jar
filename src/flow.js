@@ -111,8 +111,13 @@ export function createFlow(game) {
       // A swipe at the air. If one was close to where you aimed, it flares and darts away.
       const near = fireflies.pick(nx, ny, radius, 3.2);
       if (near) fireflies.startle(near.f, near.tooFar ? 0.5 : 1);
-      rig.scoop(sx * 0.8, sy * 0.6, false);
+      rig.scoop(sx, sy * 0.8, false);
       ui.ripple(nx, ny);
+      state.emptyReaches = (state.emptyReaches || 0) + 1;
+      if (!near && game.time - (state.emptyAt ?? -99) > 6) {
+        state.emptyAt = game.time;
+        ui.hint(state.emptyReaches > 2 ? 'the ones past the fence are too far. look for a light low over the grass' : 'nothing in reach there. walk up to a light first', 3.2, true);
+      }
       snd('miss'); log({ type: 'miss' });
       return 'miss';
     },
@@ -129,7 +134,7 @@ export function createFlow(game) {
       if (n === 1) ui.hint('one. nineteen more to fill the jar', 4.5, true);
       else if (n === 5) ui.hint('the jar is starting to glow', 4, true);
       else if (n === 10) ui.hint('halfway. the light is going', 4, true);
-      else if (n === 14) ui.hint('they are shy in the dark. walk, don’t run', 5, true);
+      else if (n === 14) ui.hint('they are shy in the dark. creep up on them', 5, true);
       else if (n === 19) ui.hint('one more', 4, true);
       if (n >= game.goal) flow.startEnding();
     },
@@ -142,6 +147,7 @@ export function createFlow(game) {
       ui.clearHint();
       ui.playing(false);
       ui.reticle('');
+      ui.guide(0);
       const p = game.player;
       state.base.yaw = p.yaw; state.base.pitch = p.pitch;
       state.starYaw = p.yaw + wrap(clearSkyYaw(p.yaw) - p.yaw);
@@ -195,6 +201,25 @@ export function createFlow(game) {
         if (!state.shown.porch && tod > 0.24) state.shown.porch = ui.hint('someone has put the porch light on', 4);
         if (!state.shown.star && tod > 0.5) state.shown.star = ui.hint('the first star is out', 4);
         if (!state.shown.dark && tod > 0.8) state.shown.dark = ui.hint('it is dark now. the jar lights your way', 4.5);
+        // Lost? After a few seconds with no firefly in view, a glow at the edge of the screen shows the way.
+        {
+          const cam = game.camera, v = new THREE.Vector3();
+          let nearest = null, nd = Infinity, onScreen = false;
+          for (const f of fireflies.wild) {
+            if (!f.alive || f.state !== 'idle') continue;
+            const d = f.pos.distanceTo(cam.position);
+            v.copy(f.pos).project(cam);
+            if (v.z < 1 && Math.abs(v.x) < 0.92 && Math.abs(v.y) < 0.92 && d < 30) onScreen = true;
+            if (d < nd) { nd = d; nearest = f; }
+          }
+          state.unseen = onScreen ? 0 : (state.unseen || 0) + dt;
+          let side = 0;
+          if (nearest && state.unseen > 3.5) {
+            const want = Math.atan2(-(nearest.pos.x - cam.position.x), -(nearest.pos.z - cam.position.z));
+            side = wrap(want - p.yaw) > 0 ? -1 : 1; // +yaw turns left
+          }
+          ui.guide(side);
+        }
         if (game.count === 0 && state.sinceCatch > 30 && !state.shown.nudge) {
           state.shown.nudge = ui.hint(controls.state.touch ? 'walk right up to a little light, then tap it' : 'walk right up to a little light, put the dot on it, and click', 7);
         }
@@ -222,7 +247,7 @@ export function createFlow(game) {
           // Where the jar of stars goes depends on the screen: above the end card on a monitor or an
           // upright phone, beside it on a phone held sideways.
           const aspect = window.innerWidth / window.innerHeight, short = window.innerHeight < 500;
-          const layout = aspect < 1 ? { el: 1.0, scale: 0.78 } : short ? { el: 0.88, az: 0.27, scale: 0.9 } : { el: 0.97, scale: 1 };
+          const layout = aspect < 1 ? { y: 0.3, scale: 0.8 } : short ? { x: -0.5, y: 0.02, scale: 0.72 } : { y: 0.27, scale: 1 };
           fireflies.releaseAll(state.starYaw, layout);
         }
         // Hands sink out of frame once the jar is empty, so the last thing on screen is the sky.
@@ -239,7 +264,7 @@ export function createFlow(game) {
       // Time of day eases toward its target so a quick run of catches never snaps the light.
       const target = game.todTarget, cur = game.tod.value;
       if (Math.abs(target - cur) > 0.0002) {
-        const rate = game.phase === 'ending' || game.phase === 'done' ? 0.07 : 0.02;
+        const rate = game.phase === 'ending' || game.phase === 'done' ? 0.034 : 0.02;
         game.tod.set(cur + THREE.MathUtils.clamp(target - cur, -rate * dt, rate * dt));
       }
       if (audio.ready && !game.DET) audio.update(game.tod.value);

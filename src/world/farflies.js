@@ -18,21 +18,18 @@ export function createFarFlies(count = 900) {
   while (n < count) {
     const kind = rnd();
     let x, y, z;
-    if (kind < 0.62) {
-      // Low over the grass beyond the fence, thickest just outside it.
-      const a = rnd() * Math.PI * 2, r = 30 + Math.pow(rnd(), 1.6) * 105;
+    if (kind < 0.8) {
+      // Low over the grass beyond the fence, thickest a little way past it.
+      const a = rnd() * Math.PI * 2, r = 30 + Math.pow(rnd(), 1.5) * 100;
       x = Math.cos(a) * r * 1.2; z = Math.sin(a) * r;
-      if (x > FENCE.minX - 1.5 && x < FENCE.maxX + 1.5 && z > FENCE.minZ - 1.5 && z < FENCE.maxZ + 1.5) continue;
-      y = farHeight(x, z) + 0.45 + Math.pow(rnd(), 1.4) * 2.2;
-    } else if (kind < 0.84) {
-      // Up in the air over the meadow itself, well above a child's reach.
-      x = FENCE.minX + rnd() * (FENCE.maxX - FENCE.minX); z = FENCE.minZ + rnd() * (FENCE.maxZ - FENCE.minZ);
-      y = heightAt(x, z) + 3.0 + Math.pow(rnd(), 1.3) * 6.5;
+      if (x > FENCE.minX - 7 && x < FENCE.maxX + 7 && z > FENCE.minZ - 7 && z < FENCE.maxZ + 7) continue;
+      y = farHeight(x, z) + 0.4 + Math.pow(rnd(), 1.6) * 1.9;
     } else {
-      // Gathering in and around the crown of the oak.
-      const a = rnd() * Math.PI * 2, r = 2 + rnd() * 8.5;
-      x = OAK.x + Math.cos(a) * r; z = OAK.z + Math.sin(a) * r;
-      y = heightAt(x, z) + 3.2 + rnd() * 8;
+      // Against the hedgerows and the trunks of the far trees.
+      const a = rnd() * Math.PI * 2, r = 70 + rnd() * 90;
+      x = Math.cos(a) * r * 1.15; z = Math.sin(a) * r;
+      if (x > FENCE.minX - 12 && x < FENCE.maxX + 12 && z > FENCE.minZ - 12 && z < FENCE.maxZ + 12) continue;
+      y = farHeight(x, z) + 1.0 + rnd() * 3.2;
     }
     pos[n * 3] = x; pos[n * 3 + 1] = y; pos[n * 3 + 2] = z;
     par[n * 4] = rnd() * 100;           // phase
@@ -62,7 +59,7 @@ export function createFarFlies(count = 900) {
   const view = modelViewMatrix.mul(vec4(aPos.add(drift), 1.0));
   const dist = view.z.negate();
   // A minimum apparent size keeps the far ones as points of light instead of vanishing.
-  const size = max(float(0.1), dist.mul(0.0085)).mul(aPar.w);
+  const size = max(float(0.07), dist.mul(0.0055)).mul(aPar.w);
   const stretch = flash.mul(rise).mul(0.35);
   const quad = vec2(positionGeometry.x, positionGeometry.y.mul(stretch.add(1.0)));
   mat.vertexNode = cameraProjectionMatrix.mul(view.add(vec4(quad.mul(size), 0.0, 0.0)));
@@ -73,7 +70,7 @@ export function createFarFlies(count = 900) {
     const halo = exp(r2.mul(-5.5)).mul(0.2);
     // A firefly's lantern is yellow at its heart and yellow-green at the edge.
     const col = mix(vec3(0.48, 1.0, 0.045), vec3(1.0, 0.78, 0.1), core);
-    return vec4(col.mul(core.mul(4.0).add(halo)).mul(vBright).mul(smoothstep(1.0, 0.7, r2)), 1.0);
+    return vec4(col.mul(core.mul(2.4).add(halo)).mul(vBright).mul(smoothstep(1.0, 0.7, r2)), 1.0);
   })();
   const mesh = new THREE.Mesh(geo, mat);
   mesh.frustumCulled = false;

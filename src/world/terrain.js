@@ -2,7 +2,7 @@
 import * as THREE from 'three/webgpu';
 import { Fn, vec2, vec3, float, positionWorld, normalWorld, texture, mix, smoothstep, saturate, length, cameraPosition } from 'three/tsl';
 import { farHeight } from './layout.js';
-import { patchNoise, yardMask, dirtMask, jarLight, vnoise, GRASS_LUSH, GRASS_DRY, GRASS_ROOT } from './common.js';
+import { patchNoise, yardMask, dirtMask, jarLight, porchPool, vnoise, GRASS_LUSH, GRASS_DRY, GRASS_ROOT } from './common.js';
 
 export function createTerrain(tex) {
   // Dense in the middle where the player walks, coarse out at the hills.
@@ -53,7 +53,7 @@ export function createTerrain(tex) {
 
   mat.emissiveNode = Fn(() => {
     const albedo = vec3(0.2, 0.17, 0.085);
-    return albedo.mul(jarLight(positionWorld, normalWorld, float(0.35)));
+    return albedo.mul(jarLight(positionWorld, normalWorld, float(0.35))).add(porchPool(positionWorld).mul(vec3(0.2, 0.19, 0.11)).mul(1.5));
   })();
 
   const mesh = new THREE.Mesh(geo, mat);

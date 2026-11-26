@@ -3,10 +3,11 @@ import * as THREE from 'three/webgpu';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import {
   Fn, vec2, vec3, vec4, float, texture, uv, positionLocal, positionWorld, normalWorld, normalLocal, fract, floor, mix, smoothstep, abs,
-  attribute, sin, max, min, step, pow, saturate, dot, normalize, normalMap,
+  attribute, sin, max, min, step, pow, saturate, dot, normalize, normalMap, reflect, cameraPosition,
 } from 'three/tsl';
 import { HOUSE, HOUSE_YAW, farHeight } from './layout.js';
 import { vnoise, hash21 } from './common.js';
+import { hazeColor } from './sky.js';
 import { U } from '../tod.js';
 
 export function createHouse(assets) {
@@ -150,7 +151,7 @@ export function createHouse(assets) {
     box('doorDark', 0.33, 0.78, 0.02, sx * 0.22, PF + 1.3, DZ + 0.065);
   }
   box('glassDoor', 0.72, 0.3, 0.02, 0, PF + 1.95, DZ + 0.065);
-  box('brass', 0.05, 0.05, 0.07, 0.4, PF + 1.05, DZ + 0.09);
+  { const knob = new THREE.SphereGeometry(0.034, 12, 10); knob.translate(0.4, PF + 1.05, DZ + 0.1); put('brass', knob); }
   // Screen door, standing a hand's width open.
   {
     const sw = 0.98, sh = 2.08, sy = PF + 1.12, hingeX = -0.5, open = 0.32;
@@ -164,8 +165,8 @@ export function createHouse(assets) {
     const pot = new THREE.CylinderGeometry(0.17, 0.12, 0.26, 12); pot.translate(sx * 1.05, PF + 0.18, hd + 0.33); put('pot', pot);
     for (let k = 0; k < 9; k++) {
       const a = k * 2.4, r = 0.05 + (k % 3) * 0.055;
-      const leaf = new THREE.IcosahedronGeometry(0.085 + (k % 2) * 0.03, 0); leaf.translate(sx * 1.05 + Math.cos(a) * r, PF + 0.4 + (k % 4) * 0.045, hd + 0.33 + Math.sin(a) * r); put('plant', leaf);
-      if (k % 2 === 0) { const fl = new THREE.IcosahedronGeometry(0.038, 0); fl.translate(sx * 1.05 + Math.cos(a + 1) * (r + 0.05), PF + 0.5 + (k % 3) * 0.05, hd + 0.33 + Math.sin(a + 1) * (r + 0.05)); put('bloom', fl); }
+      const leaf = new THREE.IcosahedronGeometry(0.085 + (k % 2) * 0.03, 1); leaf.translate(sx * 1.05 + Math.cos(a) * r, PF + 0.4 + (k % 4) * 0.045, hd + 0.33 + Math.sin(a) * r); put('plant', leaf);
+      if (k % 2 === 0) { const fl = new THREE.IcosahedronGeometry(0.034, 1); fl.translate(sx * 1.05 + Math.cos(a + 1) * (r + 0.05), PF + 0.5 + (k % 3) * 0.05, hd + 0.33 + Math.sin(a + 1) * (r + 0.05)); put('bloom', fl); }
     }
   }
   box('trim', 1.36, 0.1, 0.12, 0, PF + 2.38, DZ);
@@ -246,19 +247,19 @@ export function createHouse(assets) {
   mats.roof = roof;
   mats.mat = new THREE.MeshStandardNodeMaterial({ roughness: 1, color: 0x5a4630 });
   mats.pot = new THREE.MeshStandardNodeMaterial({ roughness: 0.9, color: 0xa3552f });
-  mats.plant = new THREE.MeshStandardNodeMaterial({ roughness: 0.9, color: 0x2f5a26, flatShading: true });
-  mats.bloom = new THREE.MeshStandardNodeMaterial({ roughness: 0.8, color: 0xc2332b, flatShading: true });
+  mats.plant = new THREE.MeshStandardNodeMaterial({ roughness: 0.9, color: 0x3f7a30 });
+  mats.bloom = new THREE.MeshStandardNodeMaterial({ roughness: 0.8, color: 0xd8402f });
   mats.brass = new THREE.MeshStandardNodeMaterial({ roughness: 0.35, color: 0xb08a3a });
   mats.glassDoor = new THREE.MeshStandardNodeMaterial({ roughness: 0.2, color: 0x1a1612 });
 
   const floorM = new THREE.MeshStandardNodeMaterial({ roughness: 0.85 });
-  floorM.colorNode = vec4(texture(tex.planks.diff, vec2(positionLocal.x.mul(0.55), positionLocal.z.mul(0.5))).rgb.mul(vec3(1.5, 1.42, 1.3)).add(0.03), 1.0);
+  floorM.colorNode = vec4(texture(tex.planks.diff, vec2(positionLocal.x.mul(0.55), positionLocal.z.mul(0.5))).rgb.mul(vec3(2.6, 2.45, 2.2)).add(0.04), 1.0);
   mats.floor = floorM;
 
   mats.stone = new THREE.MeshStandardNodeMaterial({ roughness: 1, color: 0x77726a });
   mats.dark = new THREE.MeshStandardNodeMaterial({ roughness: 1, color: 0x15130f });
-  mats.door = new THREE.MeshStandardNodeMaterial({ roughness: 0.6, color: 0x7d2a22 });
-  mats.doorDark = new THREE.MeshStandardNodeMaterial({ roughness: 0.6, color: 0x5d1e19 });
+  mats.door = new THREE.MeshStandardNodeMaterial({ roughness: 0.55, color: 0xa63c2e });
+  mats.doorDark = new THREE.MeshStandardNodeMaterial({ roughness: 0.6, color: 0x7e2a21 });
   mats.shutter = new THREE.MeshStandardNodeMaterial({ roughness: 0.75, color: 0x2f4a3c });
   mats.ceiling = new THREE.MeshStandardNodeMaterial({ roughness: 0.8, color: 0x9fc0c9 }); // haint blue
 
@@ -300,8 +301,12 @@ export function createHouse(assets) {
     const tv = smoothstep(0.9, 0.95, kind).mul(sin(U.time.mul(5.3).add(lit.z)).mul(0.5).add(0.5)).mul(0.25);
     const out = mix(room, closed, drawn).add(vec3(0.35, 0.5, 0.9).mul(tv));
     // Before the lamps come on the panes hold the sky: gold low down, blue above.
-    const pane = mix(U.horizon, U.zenith, smoothstep(0.1, 0.9, st.y)).mul(0.3).mul(float(1.0).sub(glowAmt));
-    return out.mul(glowAmt).mul(flicker).mul(mix(1.25, 0.7, fract(lit.z.mul(0.71)))).add(pane);
+    // Each pane mirrors the part of the sky it faces, so west windows burn gold and east ones go blue.
+    const R = reflect(normalize(positionWorld.sub(cameraPosition)), normalWorld);
+    const up = saturate(R.y.mul(0.8).add(0.25));
+    const sky = mix(mix(U.horizon, hazeColor(R), 0.55), U.zenith, smoothstep(0.05, 0.7, up));
+    const pane = sky.mul(0.34).mul(float(1.0).sub(glowAmt));
+    return out.mul(glowAmt).mul(flicker).mul(mix(0.85, 0.45, fract(lit.z.mul(0.71)))).add(pane);
   })();
   mats.glass = glass;
 
@@ -325,23 +330,16 @@ export function createHouse(assets) {
   const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.036, 12, 8), bulbMat);
   bulb.position.copy(lampPos);
   group.add(bulb);
-  const porchLight = new THREE.PointLight(0xffb469, 0, 11, 1.8);
-  porchLight.position.copy(lampPos).add(new THREE.Vector3(0, -0.1, 0.55));
+  const shade = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.11, 14, 1, true), new THREE.MeshStandardNodeMaterial({ color: 0x23201c, roughness: 0.5, side: THREE.DoubleSide }));
+  shade.position.copy(lampPos).add(new THREE.Vector3(0, 0.085, 0));
+  group.add(shade);
+  const porchLight = new THREE.PointLight(0xffb469, 0, 13, 1.6);
+  porchLight.position.copy(lampPos).add(new THREE.Vector3(0, -0.12, 0.5));
   group.add(porchLight);
-  // Posts, rails and the chair throw their shadows out across the lawn. Everything that casts
-  // here stands still, so the shadow is drawn once rather than every frame.
-  // A gentle falloff, so the lawn ten metres out is lit without burning anyone standing on the porch.
-  const pool = new THREE.SpotLight(0xffb469, 0, 30, 1.08, 0.85, 0.7);
-  pool.position.copy(lampPos).add(new THREE.Vector3(-0.3, 0.35, 0.3));
-  pool.target.position.set(0.2, 0.0, hd + 9.5);
-  if (assets.tier.name !== 'low') {
-    pool.castShadow = true;
-    pool.shadow.mapSize.set(1024, 1024);
-    pool.shadow.camera.near = 0.3; pool.shadow.camera.far = 30;
-    pool.shadow.bias = -0.0015; pool.shadow.normalBias = 0.03;
-    pool.shadow.autoUpdate = false; pool.shadow.needsUpdate = true;
-  }
-  group.add(pool, pool.target);
+  // By day the open sky and the lawn light the porch from the front; nothing else would reach under the roof.
+  const bounce = new THREE.PointLight(0xfff0dc, 0, 9, 1.2);
+  bounce.position.set(0, PF + 1.5, hd + 2.2);
+  group.add(bounce);
 
   // Rocking chair on the porch.
   const chair = assets.models.chair;
@@ -359,8 +357,10 @@ export function createHouse(assets) {
   const worldLamp = new THREE.Vector3();
   const update = (time, tod) => {
     const on = THREE.MathUtils.smoothstep(tod, 0.1, 0.32) * (1 + Math.sin(time * 9.0) * 0.008);
-    porchLight.intensity = on * 3.6;
-    pool.intensity = on * 12;
+    porchLight.intensity = on * 7.5;
+    U.porchOn.value = on;
+    bounce.color.copy(U.ambient.value).lerp(U.lightCol.value, 0.35);
+    bounce.intensity = 1.6;
     // Someone just got up: the chair is still rocking, slower and slower, then again in a while.
     const cyc = (time % 46) / 46;
     chairPivot.rotation.x = Math.sin(time * 2.1) * 0.07 * Math.max(0, 1 - cyc * 2.2);

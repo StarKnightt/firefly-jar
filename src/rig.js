@@ -91,11 +91,11 @@ function glassMaterial(side, glowU, emboss, { inner = false } = {}) {
     const letters = saturate(slope.mul(2.2));
     const lettersShade = saturate(slope.mul(-2.2));
     // The glass itself glows from the light inside, most at the edges and the thick parts.
-    const innerGlow = U.jarCol.mul(glowU).mul(fres.mul(1.3).add(0.05).add(thick.mul(1.5)).add(letters.mul(0.8)));
+    const innerGlow = U.jarCol.mul(glowU).mul(fres.mul(fres).mul(0.9).add(0.012).add(thick.mul(0.85)).add(letters.mul(0.5)));
     const tint = vec3(0.78, 0.93, 0.9);
-    const col = env.mul(tint).mul(fres.mul(1.0).add(0.07).add(thick.mul(0.3)).add(letters.mul(0.32)))
+    const col = env.mul(tint).mul(fres.mul(1.0).add(0.07).add(letters.mul(0.32))).add(vec3(0.16, 0.2, 0.08).mul(U.ambient.add(U.lightCol.mul(0.35))).mul(thick).mul(0.5))
       .add(U.lightCol.mul(spec)).add(skyLum.mul(streak).mul(0.55)).add(skyLum.mul(letters).mul(0.25)).add(innerGlow);
-    const alpha = saturate(fres.mul(0.85).add(inner ? 0.03 : 0.08).add(streak.mul(0.24)).add(spec.mul(0.6)).add(thick.mul(0.28)).add(letters.mul(0.3)).add(lettersShade.mul(0.3)));
+    const alpha = saturate(fres.mul(0.8).add(inner ? 0.025 : 0.07).add(streak.mul(0.24)).add(spec.mul(0.6)).add(thick.mul(0.28)).add(letters.mul(0.3)).add(lettersShade.mul(0.3)));
     return vec4(col, alpha);
   })();
   return mat;
@@ -121,7 +121,9 @@ function buildJar(glowU) {
   glowMat.vertexNode = cameraProjectionMatrix.mul(modelViewMatrix.mul(vec4(0.0, 0.0, 0.0, 1.0)).add(vec4(positionGeometry.xy.mul(vec2(0.07, 0.1)), 0.0, 0.0)));
   glowMat.colorNode = Fn(() => {
     const r2 = positionGeometry.xy.dot(positionGeometry.xy);
-    return vec4(U.jarCol.mul(glowU).mul(exp(r2.mul(-3.6))).mul(0.3), 1.0);
+    // Brighter low in the jar, where they gather, fading toward the shoulder.
+    const low = smoothstep(0.9, -0.6, positionGeometry.y);
+    return vec4(U.jarCol.mul(glowU).mul(exp(r2.mul(-3.6))).mul(low).mul(0.14), 1.0);
   })();
   const glow = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), glowMat);
   glow.position.y = 0.062;
@@ -251,9 +253,9 @@ function skinMaterial(glowU) {
     const d = length(L);
     const Ld = L.div(d.max(0.001));
     const nl = dot(normalWorld, Ld);
-    const atten = float(1.0).div(d.mul(d).mul(70.0).add(1.0));
+    const atten = float(1.0).div(d.mul(d).mul(34.0).add(1.0));
     const lit = saturate(nl.mul(0.96).add(0.04)).mul(atten);
-    const through = saturate(nl.negate().mul(0.8).add(0.3)).mul(float(1.0).div(d.mul(d).mul(260.0).add(1.0))).mul(0.2);
+    const through = saturate(nl.negate().mul(0.8).add(0.3)).mul(float(1.0).div(d.mul(d).mul(420.0).add(1.0))).mul(0.16);
     // The low sun rims the hands, as it does everything else in the meadow.
     const V = normalize(cameraPosition.sub(positionWorld));
     const rim = pow(float(1.0).sub(saturate(dot(normalWorld, V))), 3.0).mul(saturate(dot(normalWorld, U.sunDir).mul(0.6).add(0.4))).mul(U.trans).mul(0.5);
@@ -296,7 +298,7 @@ export function createRig(game) {
     hands[side] = h;
 
     // Forearm running back out of frame.
-    const fore = new THREE.Mesh(new THREE.CylinderGeometry(0.019, 0.026, 0.34, 18, 1, false), skin);
+    const fore = new THREE.Mesh(new THREE.CylinderGeometry(0.0178, 0.03, 0.34, 20, 6, false), skin);
     fore.geometry.translate(0, -0.17, 0);
     fore.scale.set(1.0, 1, 0.8);
     h.forearm = fore;
@@ -400,7 +402,7 @@ export function createRig(game) {
       const sx = side === 'L' ? -1 : 1;
       elbow.set(sx * THREE.MathUtils.lerp(0.21, 0.13, state.tall), THREE.MathUtils.lerp(-0.43, -0.52, state.tall) - state.elbowDrop, THREE.MathUtils.lerp(0.02, 0.1, state.tall));
       // Reaching for the lid the arm comes in level from the side, not up past the face.
-      if (side === 'R' && k > 0.001) elbow.lerp(dir.set(0.115 + state.carry * 0.2, -0.6, -0.33 + state.carry * 0.1), k);
+      if (side === 'R' && k > 0.001) elbow.lerp(dir.set(0.3 + state.carry * 0.14, -0.5, -0.4), k);
       dir.copy(elbow).sub(tgt).normalize();
       h.forearm.position.copy(tgt).addScaledVector(dir, -0.012);
       h.forearm.quaternion.setFromUnitVectors(DOWN, dir);
@@ -483,8 +485,8 @@ export function createRig(game) {
       const pulse = 1 + Math.sin(game.time * 2.1) * 0.05 + Math.sin(game.time * 3.7 + 1.0) * 0.035;
       const g = state.glow;
       // A fuller jar is brighter, and a dark evening makes the same jar look brighter still.
-      glowU.value = (Math.pow(g, 0.85) * 1.2 + state.flash * 0.35) * pulse;
-      U.jarInt.value = (Math.pow(g, 0.8) * 5.6 + state.flash * 1.0) * pulse * (game.jarBoost ?? 1);
+      glowU.value = (Math.pow(g, 0.9) * 0.95 + state.flash * 0.3) * pulse;
+      U.jarInt.value = (Math.pow(g, 0.8) * 6.4 + state.flash * 1.0) * pulse * (game.jarBoost ?? 1);
 
       rig.updateMatrixWorld(true);
       api.centerWorld(jarWorld);

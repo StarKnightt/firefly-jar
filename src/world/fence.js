@@ -155,7 +155,7 @@ export function createPowerLine() {
   }
   const wireGeo = new THREE.BufferGeometry();
   wireGeo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
-  const wires = new THREE.LineSegments(wireGeo, new THREE.LineBasicNodeMaterial({ color: 0x1b1714 }));
+  const wires = new THREE.LineSegments(wireGeo, new THREE.LineBasicNodeMaterial({ color: 0x0c0a09, fog: false }));
   group.add(wires);
   return group;
 }

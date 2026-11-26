@@ -208,3 +208,74 @@ phone sessions (both orientations), and measured the screenshots against the ref
 
 Checks after round 2: bot play-through passes; real-input test passes on desktop and phone;
 1920x1080 on the RTX 4060 with GPU-synced timing is 94 to 112 fps average, worst 1% 68 to 77 fps.
+
+## Round 3: critic
+
+Five major problems and fifteen minor (down from 15, then 13). It caught all 20 on desktop from
+the title with real input, walked up onto the porch, and played both phone sizes to the end card.
+
+- **Major 1.** At night about 25 lights were on screen and 4 or 5 could be caught; the rest looked
+  identical, many hung high in the sky or in the oak, clicking them did nothing at all, and
+  nothing pointed to the next real one.
+- **Major 2.** In the ending the lid arm crossed the glass as a dark red slab.
+- **Major 3.** The jar was an even milky yellow (mean luma 179, darkest 5% still 121) with the
+  fireflies lost in it, and it lit 3 to 4 m of grass flat mustard (58 against 3 to 14 beside the
+  jars in the reference).
+- **Major 4.** The white house measured 35 at dusk under a sky near 200; the porch floor, ceiling,
+  door and chair were near black; every window pane showed the same gradient; from the meadow at
+  night the porch wall was no brighter than the sky.
+- **Major 5.** On phones an ordinary full push of the stick was a sprint, which startles fireflies
+  after dark, with nothing on the stick to show where walking ends.
+- Minor: grass contrast still short of the references; night sky too saturated a blue over a
+  black middle distance; the sky raced to night during the ending; a tilted constellation on a
+  phone held sideways; an egg-shaped moon; hedges that read as smeared texture; a jar base that
+  looked like water; grass parting three metres around the player; near-white firefly cores;
+  twenty identical catches; grey smudges behind the counter and hints.
+
+## Round 3: fixes
+
+- **Which lights are real.** The uncatchable ones are now all low over the fields beyond the
+  fence or against the far trees, smaller and dimmer than catchable ones. None are overhead or in
+  the oak. Catchable fireflies have a wider, softer halo.
+- **Finding the next one.** After a few seconds with no catchable firefly in view, a soft glow at
+  the left or right edge of the screen shows which way to turn.
+- **A reach at nothing answers back.** A clearer ripple, the jar hand moves, and a line of text
+  ("nothing in reach there. walk up to a light first", or, after a few tries, that the ones past
+  the fence are too far).
+- **The arm.** The reaching arm comes in from the right beside the jar and never crosses the
+  glass; it tapers to the wrist and takes the jar's light on the side that faces it.
+- **The jar.** Dark glass between bright insects: the fill is cut to a faint haze low in the jar,
+  the points are larger, and the base refracts the ground instead of the sky. Its light on the
+  grass is inverse-square with a radius of about a metre and a half, capped up close.
+- **The farmhouse.** The tree that shaded it was moved, so the evening sun reaches the white
+  siding. Daylight now bounces under the porch roof. Panes mirror the part of the sky they face.
+  The lamp is a small shaded lantern; the wall beside the door is properly lit at night. The pool
+  of light on the lawn is now worked out by hand from the lamp, the posts, the rail and its
+  balusters, so it is bright ten metres out with real post shadows and nothing near the bulb
+  burns out.
+- **Sprint.** On touch only the outer rim of the stick runs, an inner ring marks where, and the
+  ring and knob turn amber while running. A startled firefly now gets away fast, goes farther and
+  stays uncatchable for four and a half seconds, on desktop too.
+- **Variety after dark.** Some night fireflies ride high and only dip into reach now and then.
+- **Night sky and moon.** Darker, less saturated zenith; a stronger moon that lights the meadow;
+  a smaller moon that keeps its markings.
+- **Ending.** The sky eases to night over the whole lift. Fireflies leave in a loose swirl at
+  different speeds. The constellation is laid out in the camera's own frame, so it stands upright
+  and centred in its space on every screen.
+- **Look down.** There is a kid there now: striped T-shirt, shorts, legs and sneakers that walk.
+  The grass parts around the legs only.
+- Also: text shadows instead of plates behind the counter and hints; a larger "closer" label;
+  hedges made of bushes rather than stretched cards; more saturated firefly colour; a tighter
+  shadow frustum on phones; the share button always says what it did.
+
+Found while testing:
+
+- One firefly in twenty could be given a negative release time and never leave the jar, so the
+  constellation had 19 stars. Fixed.
+- Captures could still show a stale frame after a long burst of updates. Capture now redraws the
+  current state inside an animation frame before reading the screen.
+- The new lighting cost about 15% of the frame rate. The porch-light maths is now skipped away
+  from the house and the seed stalks use half the triangles.
+
+Checks after round 3: bot play-through passes; real-input test passes; 1920x1080 on the RTX 4060
+with GPU-synced timing is 94 to 110 fps average, worst 1% 61 to 74 fps.

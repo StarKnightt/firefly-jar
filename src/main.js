@@ -19,6 +19,7 @@ import { createControls } from './controls.js';
 import { AudioEngine } from './audio.js';
 import { createUI } from './ui.js';
 import { createFlow } from './flow.js';
+import { createBody } from './body.js';
 
 const params = new URLSearchParams(location.search);
 const DEBUG = params.has('debug');
@@ -102,9 +103,10 @@ async function boot() {
   key.castShadow = true;
   key.shadow.mapSize.set(game.tier.shadow, game.tier.shadow);
   const sc = key.shadow.camera;
-  sc.left = -88; sc.right = 88; sc.top = 88; sc.bottom = -88; sc.near = 1; sc.far = 520;
+  const sr = game.tier.shadowRange;
+  sc.left = -sr; sc.right = sr; sc.top = sr; sc.bottom = -sr; sc.near = 1; sc.far = 520;
   key.shadow.bias = -0.0008;
-  key.shadow.normalBias = 0.1;
+  key.shadow.normalBias = game.tier.name === 'low' ? 0.22 : 0.1;
   key.shadow.radius = 2.5;
   scene.add(key, key.target);
   game.lights = { hemi, key };
@@ -132,6 +134,8 @@ async function boot() {
   game.flow = flow;
   game.onStep = (v) => { if (audio.ready && !DET) audio.step(v); game.audioLog?.push({ t: game.time, type: 'step', v }); };
   game.updaters.push((dt) => controls.update(dt), (dt) => flow.update(dt));
+  const body = createBody(game);
+  game.late.push(() => body.update());
   document.addEventListener('visibilitychange', () => {
     if (!audio.ctx) return;
     if (document.hidden) audio.ctx.suspend?.(); else audio.ctx.resume?.();
@@ -261,6 +265,9 @@ async function boot() {
   game.step = (dt = 1 / 60) => { game.update(dt); game.render(); };
   // For captures: resolve only when the GPU has finished everything submitted and the frame is on screen.
   game.settle = async () => {
+    // Draw the current state once more inside an animation frame: a canvas only reliably shows what
+    // was drawn during the browser's own frame, not what a long script drew between frames.
+    await new Promise((r) => requestAnimationFrame(() => { game.render(); r(); }));
     try { if (backend.isWebGPUBackend) await backend.device.queue.onSubmittedWorkDone(); else renderer.getContext().finish(); } catch { /* best effort */ }
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
   };
@@ -272,6 +279,8 @@ async function boot() {
   for (let i = 0; i < 5; i++) { game.update(1 / 60); game.render(); await game.settle(); }
   last = performance.now();
   game.ready = true;
+  // The trailer director is only ever loaded for recording.
+  if (params.has('trailer')) game.director = (await import('./director.js')).createDirector(game);
   ui.ready();
   if (params.has('autostart')) flow.begin();
   document.documentElement.classList.add('ready');

@@ -59,7 +59,7 @@ export function createDirector(game) {
     spots.forEach(([d, side, h, phase], i) => {
       const f = fireflies.wild[i];
       const x = pose.x + fx * d + rx * side, z = pose.z + fz * d + rz * side;
-      f.alive = true; f.state = 'idle'; f.height = h; f.dart = 0; f.fade = 1; f.pulse = 0;
+      f.alive = true; f.state = 'idle'; f.height = h; f.dart = 0; f.fade = 1; f.pulse = 0; f.spook = 0;
       f.pos.set(x, heightAt(x, z) + h, z); f.home.copy(f.pos); f.vel.set(0, 0, 0);
       f.period = 2.4 + (i % 4) * 0.4; f.clock = phase * f.period;
       targets.push(f);

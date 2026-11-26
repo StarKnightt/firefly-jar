@@ -56,11 +56,12 @@ export function createFireflies(game) {
   const dist = view.z.negate().max(0.05);
   // ...and far away it never shrinks to nothing: one you can catch is always a light you can see,
   // on a phone as much as on a monitor.
-  const minSize = uniform(0.0105);
+  const minSize = uniform(0.0125);
   const size = min(nPar.x, dist.mul(0.02)).max(dist.mul(minSize).mul(nExt)).max(dist.mul(0.0016).mul(nPar.w.mul(3.0).add(1.0)));
   const quad = vec2(positionGeometry.x, positionGeometry.y);
   mat.vertexNode = cameraProjectionMatrix.mul(view.add(vec4(quad.mul(size), 0.0, 0.0)));
   const vPar = varying(nPar, 'vFly');
+  const vExt = varying(nExt, 'vFlyExt');
   mat.colorNode = Fn(() => {
     const p = vec2(positionGeometry.x, positionGeometry.y);
     const r2 = p.dot(p);
@@ -70,11 +71,13 @@ export function createFireflies(game) {
     const glint = max(exp(abs(p.x).mul(-30.0)).mul(exp(abs(p.y).mul(-3.2))), exp(abs(p.y).mul(-30.0)).mul(exp(abs(p.x).mul(-3.2)))).mul(0.3).mul(vPar.w);
     const edge = smoothstep(1.0, 0.7, length(p));
     // Photinus chartreuse; amber inside the jar; pale gold once they are stars.
-    const wild = vec3(0.48, 1.0, 0.045), heart = vec3(1.0, 0.78, 0.1), amber = vec3(1.0, 0.84, 0.2), star = vec3(1.0, 0.9, 0.62);
+    const wild = vec3(0.42, 0.9, 0.03), heart = vec3(0.78, 0.84, 0.06), amber = vec3(1.0, 0.84, 0.2), star = vec3(1.0, 0.9, 0.62);
     const col = mix(mix(wild, amber, vPar.z), star, vPar.w);
     // The lantern is yellow at its heart and yellow-green at the edge.
     const hot = mix(col, heart, core.mul(float(1.0).sub(vPar.w)).mul(0.9));
-    return vec4(hot.mul(core.mul(4.2).add(halo).add(glint)).mul(vPar.y).mul(edge), 1.0);
+    // A wider, softer halo marks the ones that can be caught; stars and sparks keep a tight one.
+    const halo2 = exp(r2.mul(-2.6)).mul(0.1).mul(vExt);
+    return vec4(hot.mul(core.mul(mix(float(2.7), float(4.2), max(vPar.z, vPar.w))).add(halo).add(halo2).add(glint)).mul(vPar.y).mul(edge), 1.0);
   })();
   const mesh = new THREE.Mesh(geo, mat);
   mesh.frustumCulled = false;
@@ -138,7 +141,8 @@ export function createFireflies(game) {
     const dark = THREE.MathUtils.smoothstep(game.tod.value, 0.3, 0.9);
     for (let tries = 0; tries < 30; tries++) {
       let a, r;
-      if (opts.near) { a = game.player.yaw + (rnd() - 0.5) * 0.95; r = 5.5 + rnd() * 3.5; }
+      if (opts.near) { a = game.player.yaw + (rnd() - 0.5) * 0.6; r = 5.5 + rnd() * 3.5; }
+      else if (opts.into) { a = game.player.yaw + (rnd() < 0.5 ? -1 : 1) * (0.25 + rnd() * 0.3); r = 9 + rnd() * 5; }
       else if (opts.ahead) { a = game.player.yaw + (rnd() - 0.5) * 1.5; r = THREE.MathUtils.lerp(12, 15, dark) + rnd() * 9; }
       else { a = rnd() * Math.PI * 2; r = THREE.MathUtils.lerp(13, 17, dark) + rnd() * 24; }
       // yaw 0 looks down -z.
@@ -154,6 +158,7 @@ export function createFireflies(game) {
       f.vel.set(0, 0, 0);
       f.alive = true; f.state = 'idle'; f.fade = 0; f.glow = 0; f.dart = 0; f.pulse = 0; f.spook = 0;
       f.period = 2.4 + rnd() * 2.6; f.clock = rnd() * f.period;
+      f.dip = !opts.near && rnd() < 0.4 * dark;
       return true;
     }
     return false;
@@ -255,22 +260,25 @@ export function createFireflies(game) {
 
     // The ending: let them all go. They circle you once, then climb into a jar-shaped constellation.
     releaseAll(yaw, layout = {}) {
-      const el0 = layout.el ?? 0.86, sc = layout.scale ?? 1;
-      yaw += layout.az ?? 0;
+      const sc = layout.scale ?? 1, pitch = 0.86;
+      // Where the camera will be looking when they arrive, and its right and up.
+      const V = new THREE.Vector3(-Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), -Math.cos(yaw) * Math.cos(pitch));
+      const Rt = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
+      const Up = new THREE.Vector3().crossVectors(Rt, V).normalize();
+      const halfH = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)), halfW = halfH * camera.aspect;
+      const cx = (layout.x ?? 0) * halfW, cy = (layout.y ?? 0.2) * halfH;
       let k = 0;
       jarFlies.forEach((j) => {
         if (!j.active) return;
-        j.release = 0.2 + k * 0.4 + rnd() * 0.12;
+        j.release = Math.max(0.05, 0.2 + k * 0.4 + (rnd() - 0.5) * 0.7);
+        j.turn = 0.9 + rnd() * 1.3;
         j.left = false;
         const [sx, sy] = JAR_STARS[k % JAR_STARS.length];
-        const el = el0 + sy * 0.25 * sc;
-        const az = yaw - (sx * 0.2 * sc) / Math.cos(el);
-        const d = 420;
-        j.star.set(-Math.sin(az) * Math.cos(el) * d, Math.sin(el) * d, -Math.cos(az) * Math.cos(el) * d);
+        j.star.copy(V).addScaledVector(Rt, cx + sx * 0.2 * sc).addScaledVector(Up, cy + sy * 0.26 * sc).normalize().multiplyScalar(420);
         j.spin = yaw + Math.PI + (rnd() - 0.5) * 0.6; // they leave over the far rim, then sweep round
-        j.orbit = 1.6 + rnd() * 1.5;
-        j.orbitH = 0.2 + rnd() * 1.3;
-        j.dirSign = k % 5 === 4 ? -1 : 1;
+        j.orbit = 1.0 + rnd() * 2.6;
+        j.orbitH = 0.1 + rnd() * 1.9;
+        j.dirSign = rnd() < 0.3 ? -1 : 1;
         k++;
       });
       api.released = 0;
@@ -286,8 +294,8 @@ export function createFireflies(game) {
       const night = THREE.MathUtils.smoothstep(tod, 0.3, 0.9);
       api.reach = THREE.MathUtils.lerp(3.6, 3.0, night);
       api.activeTarget = Math.round(THREE.MathUtils.lerp(6, 10, THREE.MathUtils.smoothstep(tod, 0.05, 0.8)));
-      minSize.value = 0.0105 * THREE.MathUtils.clamp(1000 / window.innerHeight, 1, 2.3);
-      lineAspect.value = camera.aspect; lineWidth.value = 2.4 / window.innerHeight * THREE.MathUtils.clamp(900 / window.innerHeight, 1, 1.8);
+      minSize.value = 0.0125 * THREE.MathUtils.clamp(1000 / window.innerHeight, 1, 2.3);
+      lineAspect.value = camera.aspect; lineWidth.value = 2.0 / window.innerHeight;
       const speedMul = 1 + night * 0.7;
       const playing = game.phase === 'play' || game.phase === 'title';
 
@@ -326,8 +334,8 @@ export function createFireflies(game) {
           }
           // Run at one in the dark and it flares, bolts, and will not be caught for a few seconds.
           if (night > 0.3 && running && dp < 5.5 && f.spook <= 0 && playing) {
-            f.spook = 3.2;
-            api.startle(f, 2.5);
+            f.spook = 4.6;
+            api.startle(f, 2.6);
             api.events.push({ type: 'spooked' });
           }
           if (f.dart > 0.01) {
@@ -336,8 +344,9 @@ export function createFireflies(game) {
             f.dart *= Math.exp(-dt * 1.9);
           }
           if (!inFence(f.home.x, f.home.z, 2)) { f.home.x = THREE.MathUtils.clamp(f.home.x, FENCE.minX + 2, FENCE.maxX - 2); f.home.z = THREE.MathUtils.clamp(f.home.z, FENCE.minZ + 2, FENCE.maxZ - 2); }
-          f.vel.x += (tmp.x - f.vel.x) * Math.min(1, dt * 1.8);
-          f.vel.z += (tmp.z - f.vel.z) * Math.min(1, dt * 1.8);
+          const snap = f.dart > 0.25 ? 7 : 1.8;
+          f.vel.x += (tmp.x - f.vel.x) * Math.min(1, dt * snap);
+          f.vel.z += (tmp.z - f.vel.z) * Math.min(1, dt * snap);
 
           // Blink: on for about half a second while it swoops up (the J a firefly draws), then dark.
           f.clock += dt;
@@ -347,7 +356,8 @@ export function createFireflies(game) {
           const swoopT = Math.min(1, ph / 0.6);
           const swoop = ph < 0.6 ? Math.sin(swoopT * Math.PI * 0.5) : Math.max(0, 1 - (ph - 0.6) / 1.4);
           const ground = heightAt(f.pos.x, f.pos.z);
-          const wantY = ground + f.height + Math.sin(time * 0.6 + s) * 0.14 + swoop * 0.32 - (ph < 0.1 ? 0.06 : 0);
+          const high = f.dip ? (Math.sin(time * 0.8 + s * 3.1) * 0.5 + 0.5) * 2.1 : 0;
+          const wantY = ground + f.height + high + Math.sin(time * 0.6 + s) * 0.14 + swoop * 0.32 - (ph < 0.1 ? 0.06 : 0);
           f.vel.y += ((wantY - f.pos.y) * 5.0 - f.vel.y) * Math.min(1, dt * 5);
           f.pos.addScaledVector(f.vel, dt);
 
@@ -403,7 +413,7 @@ export function createFireflies(game) {
           }
           // Out of the jar, a slow widening turn around the child holding it...
           const widen = THREE.MathUtils.smoothstep(age, 0.0, 2.6);
-          const ang = j.spin + j.dirSign * age * (1.5 - widen * 0.45);
+          const ang = j.spin + j.dirSign * age * (j.turn ?? 1.5) * (1 - widen * 0.3);
           const rad = widen * j.orbit;
           const px = THREE.MathUtils.lerp(j.start.x, cam.x, widen), pz = THREE.MathUtils.lerp(j.start.z, cam.z, widen);
           tmp.set(px + Math.sin(ang) * rad, j.start.y + age * 0.12 + widen * j.orbitH + Math.sin(age * 2.3 + j.seed) * 0.07 + Math.max(0, age - 4.5) * 0.5, pz + Math.cos(ang) * rad);
@@ -429,7 +439,7 @@ export function createFireflies(game) {
         j.world.copy(j.local).add(wob).applyMatrix4(M);
         const ph = j.clock % j.period;
         const blink = ph < 0.08 ? ph / 0.08 : Math.exp(-(ph - 0.08) * 2.4);
-        put(j.i, j.world, 0.0105 + blink * 0.005 + j.enter * 0.01, 0.95 + blink * 1.5 + j.enter * 1.6, 0.3, 0, 0);
+        put(j.i, j.world, 0.0135 + blink * 0.007 + j.enter * 0.01, 0.75 + blink * 1.7 + j.enter * 1.6, 0.3, 0, 0);
       }
       api.settled = settled;
 

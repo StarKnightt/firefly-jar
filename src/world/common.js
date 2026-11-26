@@ -1,10 +1,10 @@
 // TSL helpers shared by ground, grass, flowers and props.
 import * as THREE from 'three/webgpu';
 import {
-  Fn, vec2, vec3, float, sin, cos, dot, fract, floor, mix, smoothstep, saturate, length, normalize, max, min, clamp, exp,
+  Fn, If, vec2, vec3, float, sin, cos, dot, fract, floor, mix, smoothstep, saturate, length, normalize, max, min, clamp, exp, abs,
 } from 'three/tsl';
 import { U } from '../tod.js';
-import { HOUSE, OAK, GATE, FENCE } from './layout.js';
+import { HOUSE, HOUSE_YAW, OAK, GATE, FENCE } from './layout.js';
 
 export const SWING = new THREE.Vector3(OAK.x + 5.7, 0, OAK.z + 3.7);
 
@@ -64,6 +64,35 @@ export const GRASS_TIP = new THREE.Color(0xa9b862);
 
 // Warm light of the jar. Not a scene light: it needs an artistic falloff so it can
 // pool on the grass at arm's length without burning out the hands holding it.
+// The porch light on the lawn. Worked out by hand rather than with a shadow-casting lamp: for a
+// point on the ground, follow the line back to the bulb and see what it passes at the porch edge
+// (a post, the rail and its balusters, or the porch floor). That gives the fan of post shadows a
+// real porch light throws, at any brightness, without burning out everything near the bulb.
+const hc = Math.cos(HOUSE_YAW), hs = Math.sin(HOUSE_YAW);
+export const porchPool = /*@__PURE__*/ Fn(([worldPos]) => {
+  const wx = worldPos.x.sub(HOUSE.x), wz = worldPos.z.sub(HOUSE.z);
+  const out = vec3(0.0).toVar();
+  // Only the lawn in front of the house is worth the arithmetic.
+  If(wx.mul(wx).add(wz.mul(wz)).lessThan(26 * 26).and(U.porchOn.greaterThan(0.01)), () => {
+  const lx = wx.mul(hc).sub(wz.mul(hs)), lz = wx.mul(hs).add(wz.mul(hc));
+  const Lx = 0.98, Ly = 2.55, Lz = 3.7, edge = 5.78;
+  const t = float(edge - Lz).div(lz.sub(Lz).max(0.05));       // where the ray crosses the line of posts
+  const xc = lx.sub(Lx).mul(t).add(Lx), yc = float(Ly).mul(float(1.0).sub(t));
+  let post = float(0.0);
+  for (const px of [-4.45, -2.35, -0.95, 0.95, 2.35, 4.45]) post = max(post, smoothstep(0.13, 0.06, abs(xc.sub(px))));
+  const railed = smoothstep(0.9, 1.0, abs(xc)).mul(smoothstep(4.5, 4.4, abs(xc)));
+  const baluster = smoothstep(0.3, 0.42, abs(fract(xc.div(0.21)).sub(0.5)).mul(2.0)).mul(0.55);
+  const rail = max(smoothstep(0.05, 0.02, abs(yc.sub(1.48))), smoothstep(0.05, 0.02, abs(yc.sub(0.76)))).max(baluster.mul(smoothstep(0.74, 0.8, yc)).mul(smoothstep(1.5, 1.44, yc))).mul(railed);
+  const floor = smoothstep(0.62, 0.5, yc);                    // below the boards: the porch itself is in the way
+  const lit = float(1.0).sub(max(max(post, rail), floor));
+  const dist = length(vec2(lx.sub(Lx), lz.sub(Lz)));
+  const inFront = smoothstep(5.8, 6.6, lz).mul(smoothstep(8.5, 3.0, abs(xc)));
+  const fall = float(1.0).div(dist.mul(dist).mul(0.02).add(1.0)).mul(smoothstep(19.0, 9.0, dist));
+  out.assign(vec3(1.0, 0.66, 0.34).mul(lit).mul(inFront).mul(fall).mul(U.porchOn));
+  });
+  return out;
+});
+
 // A firefly flashing just above the grass lights the blade tips under it.
 export const flyLight = /*@__PURE__*/ Fn(([worldPos]) => {
   let sum = float(0.0);
@@ -78,7 +107,7 @@ export const jarLight = /*@__PURE__*/ Fn(([worldPos, worldNormal, wrap]) => {
   const L = U.jarPos.sub(worldPos);
   const d = length(L);
   const nl = saturate(dot(worldNormal, L.div(d.max(0.001))).mul(float(1.0).sub(wrap)).add(wrap));
-  const atten = exp(d.mul(-2.2)).mul(smoothstep(4.2, 1.6, d));
+  const atten = float(1.0).div(d.mul(d).mul(3.4).add(1.0)).min(0.42).mul(smoothstep(3.2, 1.1, d));
   return U.jarCol.mul(U.jarInt).mul(atten).mul(nl);
 });
 

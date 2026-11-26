@@ -18,10 +18,10 @@ const KEYS = [
   { t: 0.64, sunElev: -9.0, sunCol: C(0xff5a30), sunInt: 0.0, zenith: C(0x1b2a60), horizon: C(0x46508c), mid: C(0x2e3f7e), glow: C(0x9a5650), glowAmt: 0.32,
     hemiSky: C(0x6276c2), hemiGnd: C(0x232a48), hemiInt: 0.30, fog: C(0x333f70), fogDen: 0.0048, stars: 0.5, moon: 0.4, exposure: 1.12, cloudLit: C(0x4a4a72), cloudDark: C(0x171c38), trans: 0.0 },
   // Night: dark, but a soft blue you can still see the meadow by.
-  { t: 0.82, sunElev: -14.0, sunCol: C(0xff5a30), sunInt: 0.0, zenith: C(0x101c44), horizon: C(0x293868), mid: C(0x19295c), glow: C(0x3a3a60), glowAmt: 0.2,
-    hemiSky: C(0x6c84cc), hemiGnd: C(0x1a2240), hemiInt: 0.22, fog: C(0x1e2a52), fogDen: 0.0046, stars: 0.9, moon: 0.8, exposure: 1.12, cloudLit: C(0x263258), cloudDark: C(0x0e1430), trans: 0.0 },
-  { t: 1.00, sunElev: -18.0, sunCol: C(0xff5a30), sunInt: 0.0, zenith: C(0x0d1838), horizon: C(0x202d5a), mid: C(0x14214e), glow: C(0x2a2e52), glowAmt: 0.15,
-    hemiSky: C(0x7088cc), hemiGnd: C(0x182040), hemiInt: 0.20, fog: C(0x1a2548), fogDen: 0.0044, stars: 1.0, moon: 1.0, exposure: 1.12, cloudLit: C(0x222c54), cloudDark: C(0x0c1230), trans: 0.0 },
+  { t: 0.82, sunElev: -14.0, sunCol: C(0xff5a30), sunInt: 0.0, zenith: C(0x0f1a3c), horizon: C(0x2a365c), mid: C(0x1a2550), glow: C(0x3a3a60), glowAmt: 0.2,
+    hemiSky: C(0x7088c4), hemiGnd: C(0x1c2440), hemiInt: 0.26, fog: C(0x1c2646), fogDen: 0.0046, stars: 0.9, moon: 0.8, exposure: 1.12, cloudLit: C(0x263258), cloudDark: C(0x0e1430), trans: 0.0 },
+  { t: 1.00, sunElev: -18.0, sunCol: C(0xff5a30), sunInt: 0.0, zenith: C(0x0c1632), horizon: C(0x263054), mid: C(0x161f44), glow: C(0x2a2e52), glowAmt: 0.15,
+    hemiSky: C(0x748cc4), hemiGnd: C(0x1c2440), hemiInt: 0.25, fog: C(0x1a2340), fogDen: 0.0044, stars: 1.0, moon: 1.0, exposure: 1.12, cloudLit: C(0x222c54), cloudDark: C(0x0c1230), trans: 0.0 },
 ];
 
 export const SUN_AZ = Math.atan2(0.30, -1.0); // direction the sun sits in, xz plane (west, a touch south)
@@ -57,6 +57,7 @@ export const U = {
   // The nearest few fireflies, so each one can throw a little light on the grass under it.
   flyLights: [0, 1, 2, 3].map(() => uniform(new THREE.Vector4(0, -99, 0, 0))),
   jarInt: uniform(0),
+  porchOn: uniform(0),
 };
 
 const tmp = { a: new THREE.Color(), b: new THREE.Color() };
@@ -106,7 +107,7 @@ export class TimeOfDay {
 
     // One shadow-casting key light: the sun until it sets, then the moon.
     // They swap while both are at zero so the change is never visible.
-    const moonInt = 0.42 * s.moon;
+    const moonInt = 0.62 * s.moon;
     if (s.sunInt > 0.001) {
       U.lightDir.value.copy(this.sunDir);
       U.lightCol.value.copy(s.sunCol).multiplyScalar(s.sunInt);

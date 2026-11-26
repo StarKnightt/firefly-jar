@@ -91,11 +91,11 @@ export function createSky() {
 
     // Moon: small soft disc with a wide halo.
     const md = saturate(dot(dir, moonDir));
-    const moonDisc = smoothstep(0.99972, 0.99980, md);
-    const maria = mx_noise_float(dir.sub(moonDir).mul(95.0).add(3.0)).mul(0.5).add(0.5);
-    const face = mix(0.55, 1.0, smoothstep(0.35, 0.65, maria)).mul(mix(0.75, 1.0, smoothstep(0.99972, 0.99990, md)));
+    const moonDisc = smoothstep(0.99984, 0.99989, md);
+    const maria = mx_noise_float(dir.sub(moonDir).mul(150.0).add(3.0)).mul(0.5).add(0.5);
+    const face = mix(0.5, 1.0, smoothstep(0.35, 0.65, maria)).mul(mix(0.8, 1.0, smoothstep(0.99984, 0.99995, md)));
     const moonHalo = pow(md, 6000.0).mul(0.35).add(pow(md, 500.0).mul(0.06));
-    col.addAssign(vec3(0.86, 0.9, 1.0).mul(moonDisc.mul(face).mul(2.2).add(moonHalo)).mul(U.moon).mul(float(1.0).sub(cloudA.mul(0.6))));
+    col.addAssign(vec3(0.86, 0.9, 1.0).mul(moonDisc.mul(face).mul(1.15).add(moonHalo.mul(0.7))).mul(U.moon).mul(float(1.0).sub(cloudA.mul(0.6))));
 
     return col;
   })();

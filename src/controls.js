@@ -89,9 +89,10 @@ export function createControls(game, { onCatch, onLockChange }) {
   // ---------- touch ----------
   const touches = new Map();
   let stickId = null, lookId = null;
-  const STICK_R = 54;
+  const STICK_R = 60, RUN_AT = 0.86;
   const setStick = (x, y, active) => {
     stickEl.classList.toggle('active', active);
+    if (!active) stickEl.classList.remove('run');
     if (active) { stickEl.style.left = x + 'px'; stickEl.style.top = y + 'px'; }
     else { stickEl.style.left = ''; stickEl.style.top = ''; knobEl.style.transform = ''; }
   };
@@ -114,14 +115,18 @@ export function createControls(game, { onCatch, onLockChange }) {
     t.x = e.clientX; t.y = e.clientY;
     t.moved = Math.max(t.moved, Math.hypot(t.x - t.x0, t.y - t.y0));
     // A swipe across the screen turns you about the same amount whichever way the phone is held.
-    if (t.role === 'look') look(dx, dy, 3.4 / Math.max(520, window.innerWidth));
+    if (t.role === 'look') look(dx, dy, 2.5 / Math.max(360, Math.min(window.innerWidth, window.innerHeight)));
     else if (t.role === 'stick' && t.moved > 9) {
       if (!t.shown) { t.shown = true; setStick(t.x0, t.y0, true); }
       let sx = t.x - t.x0, sy = t.y - t.y0;
       const len = Math.hypot(sx, sy);
       if (len > STICK_R) { sx *= STICK_R / len; sy *= STICK_R / len; }
       knobEl.style.transform = `translate(${sx}px, ${sy}px)`;
-      t.vx = sx / STICK_R; t.vy = -sy / STICK_R;
+      // Inside the inner ring is a walk at any push; only the outer rim runs.
+      const mag = Math.hypot(sx, sy) / STICK_R, running = mag > RUN_AT;
+      const scale = running ? 1 : Math.min(1, mag / (RUN_AT * 0.8)) / Math.max(mag, 0.001);
+      t.vx = sx / STICK_R * (running ? 1 / mag : scale); t.vy = -sy / STICK_R * (running ? 1 / mag : scale); t.run = running;
+      stickEl.classList.toggle('run', running);
     }
     e.preventDefault();
   };
@@ -159,7 +164,7 @@ export function createControls(game, { onCatch, onLockChange }) {
         if (keys.has('KeyA') || keys.has('ArrowLeft')) move.x -= 1;
         run = keys.has('ShiftLeft') || keys.has('ShiftRight');
         const st = stickId !== null ? touches.get(stickId) : null;
-        if (st && st.vx !== undefined) { move.x += st.vx; move.y += st.vy; run = Math.hypot(st.vx, st.vy) > 0.94; }
+        if (st && st.vx !== undefined) { move.x += st.vx; move.y += st.vy; run = !!st.run; }
       }
       if (api.autopilot) { move.set(api.autopilot.x, api.autopilot.y); run = !!api.autopilot.run; }
       const len = move.length();
