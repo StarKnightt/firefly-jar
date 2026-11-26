@@ -333,7 +333,7 @@ export function createRig(game) {
     },
     spread: { index: 0.06, middle: 0.0, ring: -0.05, pinky: -0.12, thumb: 0.0 },
     // Right hand on the lid: palm down over it, fingertips on the far rim, thumb on the near rim.
-    lid: { x: 0.042, y: 0.034, z: 0.046, yaw: 0.62, pitch: -0.22, roll: Math.PI / 2 },
+    lid: { x: 0.062, y: 0.034, z: 0.016, yaw: 1.35, pitch: -0.18, roll: Math.PI / 2 },
     lidCurl: {
       thumb: [0.25, 0.3, 0.35], index: [0, 0.55, 0.6, 0.4], middle: [0, 0.6, 0.62, 0.4],
       ring: [0, 0.62, 0.64, 0.42], pinky: [0, 0.64, 0.66, 0.45],
@@ -402,7 +402,7 @@ export function createRig(game) {
       const sx = side === 'L' ? -1 : 1;
       elbow.set(sx * THREE.MathUtils.lerp(0.21, 0.13, state.tall), THREE.MathUtils.lerp(-0.43, -0.52, state.tall) - state.elbowDrop, THREE.MathUtils.lerp(0.02, 0.1, state.tall));
       // Reaching for the lid the arm comes in level from the side, not up past the face.
-      if (side === 'R' && k > 0.001) elbow.lerp(dir.set(0.3 + state.carry * 0.14, -0.5, -0.4), k);
+      if (side === 'R' && k > 0.001) elbow.lerp(dir.set(0.34 + state.carry * 0.12, -0.42, -0.37), k);
       dir.copy(elbow).sub(tgt).normalize();
       h.forearm.position.copy(tgt).addScaledVector(dir, -0.012);
       h.forearm.quaternion.setFromUnitVectors(DOWN, dir);
