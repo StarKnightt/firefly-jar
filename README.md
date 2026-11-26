@@ -14,11 +14,12 @@ A short trailer with sound is in [`trailer.mp4`](trailer.mp4).
 
 - **Computer:** click to start. `W` `A` `S` `D` to wander, mouse to look, `Shift` to run. Walk up
   to a firefly, put the dot on it and click. `Esc` frees the mouse; `M` mutes.
-- **Phone:** tap to start. Left thumb anywhere on the left side to wander, drag on the right to
-  look, tap a firefly to catch it. Works in portrait and landscape.
+- **Phone:** tap to start. Left thumb anywhere on the left side to wander (push to the rim to run),
+  drag on the right to look, tap a firefly to catch it. Works in portrait and landscape.
 
-Each firefly makes the jar glow brighter, and brings night a little closer. They are quicker and
-shyer after dark. When the jar holds twenty, you lift it and open the lid.
+Each firefly makes the jar glow brighter, and brings night a little closer. After dark they are
+shy: run at one and it bolts, walk up and it lets you. The gate is open, so you can wander up the
+path to the porch. When the jar holds twenty, you lift it and open the lid.
 
 It takes about five minutes. Sound on is better.
 
@@ -28,11 +29,15 @@ It takes about five minutes. Sound on is better.
   WebGPU. Three quality tiers, picked automatically.
 - A whole evening driven by one number from golden hour to night: sun, sky, haze, light,
   exposure, crickets and the lights in the farmhouse all follow it.
-- About 200,000 tufts of grass placed in the vertex shader in rings around you, with wind gusts,
-  backlight through the blades, and blades that part as you walk. Four kinds of wildflower.
+- About 260,000 tufts of grass placed in the vertex shader in rings around you, with wind gusts,
+  backlight through the blades, seed heads, and blades that part around your legs. Four kinds of
+  wildflower.
 - An oak with a tire swing, a weathered fence, a clapboard farmhouse with a porch light, a
   treeline, a power line and a town on the horizon.
-- Your hands and the jar: the light from inside spills on your fingers and the grass.
+- Your hands and the jar: the light from inside spills on your fingers and the grass, and one
+  hand lifts the lid for every catch. Look down and the rest of you is there too.
+- Twenty fireflies you can catch, and several hundred more you cannot, out over the fields and
+  against the far trees.
 - Real cricket and breeze recordings, a music box melody that adds layers as the jar fills, and a
   bell for every catch.
 
