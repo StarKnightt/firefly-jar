@@ -549,3 +549,6 @@ phone hardware. What was done instead:
   No shader errors on the WebGL2 path.
 - A full phone-size play-through by the bot on the phone tier passes (20 caught, 20 released, end
   card).
+
+On the live link after this change: `tools/phonepaths.mjs --url` passes all 15 checks and
+`tools/livecheck.mjs --url` passes at 1920x1080, 844x390 and 390x844.
