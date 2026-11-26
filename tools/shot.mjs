@@ -36,7 +36,7 @@ for (const st of states.length ? states : ['default:']) {
     }
     const n = kv.steps ?? 40;
     for (let i = 0; i < n; i++) g.step(1 / 60);
-    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    await g.settle();
   }, { kv });
   await b.page.waitForTimeout(250);
   const file = path.join(out, name + '.png');

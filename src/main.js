@@ -92,7 +92,7 @@ async function boot() {
   const oak = createOak(assets);
   const house = createHouse(assets);
   scene.add(oak.group, house.group, createFarTrees(assets, game.tier), createFence(assets), createPowerLine(), createTown());
-  scene.add(createFarFlies(game.tier.name === 'low' ? 240 : 420));
+  scene.add(createFarFlies(game.tier.farflies));
   game.oak = oak; game.house = house;
   game.updaters.push(() => { oak.update(game.time); house.update(game.time, game.tod.value); });
 
@@ -102,9 +102,9 @@ async function boot() {
   key.castShadow = true;
   key.shadow.mapSize.set(game.tier.shadow, game.tier.shadow);
   const sc = key.shadow.camera;
-  sc.left = -46; sc.right = 46; sc.top = 46; sc.bottom = -46; sc.near = 1; sc.far = 420;
-  key.shadow.bias = -0.0006;
-  key.shadow.normalBias = 0.06;
+  sc.left = -88; sc.right = 88; sc.top = 88; sc.bottom = -88; sc.near = 1; sc.far = 520;
+  key.shadow.bias = -0.0008;
+  key.shadow.normalBias = 0.1;
   key.shadow.radius = 2.5;
   scene.add(key, key.target);
   game.lights = { hemi, key };
@@ -122,6 +122,7 @@ async function boot() {
   const ui = createUI(game, {
     onBegin: () => flow.begin(), onResume: () => flow.resume(), onAgain: () => flow.again(),
     onMute: (off) => audio.setMuted(off),
+    fireflyAt: (x, y) => flow.fireflyAt(x, y), tapCatch: (x, y) => flow.tryCatch((x / window.innerWidth) * 2 - 1, -((y / window.innerHeight) * 2 - 1), true),
   });
   game.ui = ui;
   const controls = createControls(game, { onCatch: (x, y, touch) => flow.tryCatch(x, y, touch), onLockChange: (l) => flow.lockChanged(l) });
@@ -147,13 +148,16 @@ async function boot() {
     if ('begin' in kv && game.phase === 'title') flow.begin();
     if ('lock' in kv) { game.todLock = !!kv.lock; game.camLock = !!kv.lock; }
     if ('lift' in kv) rig.state.lift = kv.lift;
+    if ('handK' in kv) { rig.state.handK = kv.handK; rig.state.catchT = -1; }
+    if ('lidLift' in kv) rig.state.lidLift = kv.lidLift;
+    if ('carry' in kv) rig.state.carry = kv.carry;
     if ('rigview' in kv) {
       // Park the rig in open air and orbit it, to check the grip from outside.
       const v = kv.rigview;
       if (v) { scene.add(rig.rig); rig.rig.position.set(0, 60, 0); rig.rig.rotation.set(0, 0, 0); }
       else { camera.add(rig.rig); rig.rig.position.set(0, 0, 0); }
       const c = new THREE.Vector3(0, 60 - 0.17, -0.405);
-      const views = { 1: [0, 0.5, 0.001], 2: [-0.5, 0.05, 0], 3: [0, 0.12, -0.5], 4: [0.32, 0.28, 0.3], 5: [0, 0.17, 0.405] };
+      const views = { 1: [0, 0.5, 0.001], 2: [-0.5, 0.05, 0], 3: [0, 0.12, -0.5], 4: [0.32, 0.28, 0.3], 5: [0, 0.17, 0.405], 6: [0.5, 0.08, 0.02] };
       game.camOverride = v ? { pos: c.clone().add(new THREE.Vector3(...views[v])), look: c } : null;
     }
   };
@@ -188,10 +192,10 @@ async function boot() {
     U.camPos.value.copy(camera.position);
     U.time.value = game.time;
     // Shadow frustum follows the player on a coarse grid so shadows don't swim.
-    const snap = 4;
+    const snap = 8;
     shadowTarget.set(Math.round(p.pos.x / snap) * snap, 0, Math.round(p.pos.z / snap) * snap);
     key.target.position.copy(shadowTarget);
-    key.position.copy(shadowTarget).addScaledVector(U.lightDir.value, 200);
+    key.position.copy(shadowTarget).addScaledVector(U.lightDir.value, 260);
   };
 
   function resize() {
@@ -255,8 +259,18 @@ async function boot() {
   }
   if (!DET) renderer.setAnimationLoop(tick);
   game.step = (dt = 1 / 60) => { game.update(dt); game.render(); };
+  // For captures: resolve only when the GPU has finished everything submitted and the frame is on screen.
+  game.settle = async () => {
+    try { if (backend.isWebGPUBackend) await backend.device.queue.onSubmittedWorkDone(); else renderer.getContext().finish(); } catch { /* best effort */ }
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  };
 
   game.phase = 'title';
+  // Warm up before the button wakes: compile every pipeline and push a few real frames through
+  // the GPU, so the first step into the meadow is smooth instead of a stall.
+  try { await renderer.compileAsync(scene, camera); } catch { /* falls back to compiling on first draw */ }
+  for (let i = 0; i < 5; i++) { game.update(1 / 60); game.render(); await game.settle(); }
+  last = performance.now();
   game.ready = true;
   ui.ready();
   if (params.has('autostart')) flow.begin();

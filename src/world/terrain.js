@@ -33,7 +33,7 @@ export function createTerrain(tex) {
     // What the grass standing on this spot looks like from above; the far
     // field has no blades, so the ground has to carry the same colour.
     const meadow = mix(vec3(GRASS_LUSH.r, GRASS_LUSH.g, GRASS_LUSH.b), vec3(GRASS_DRY.r, GRASS_DRY.g, GRASS_DRY.b), patch).mul(0.62);
-    const soilUnder = mix(vec3(GRASS_ROOT.r, GRASS_ROOT.g, GRASS_ROOT.b).mul(0.9), t.mul(0.55), 0.35);
+    const soilUnder = mix(vec3(GRASS_ROOT.r, GRASS_ROOT.g, GRASS_ROOT.b).mul(0.75), t.mul(vec3(0.42, 0.55, 0.26)), 0.22);
     const underGrass = mix(soilUnder, meadow, smoothstep(14.0, 70.0, dist));
 
     const lawn = mix(vec3(0.20, 0.33, 0.10), vec3(0.30, 0.40, 0.14), vnoise(xz.mul(0.9))).mul(lum.mul(1.6).add(0.35));
@@ -52,7 +52,7 @@ export function createTerrain(tex) {
   })();
 
   mat.emissiveNode = Fn(() => {
-    const albedo = vec3(0.16, 0.2, 0.09);
+    const albedo = vec3(0.2, 0.17, 0.085);
     return albedo.mul(jarLight(positionWorld, normalWorld, float(0.35)));
   })();
 

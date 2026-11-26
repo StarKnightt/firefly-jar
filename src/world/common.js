@@ -1,12 +1,12 @@
 // TSL helpers shared by ground, grass, flowers and props.
 import * as THREE from 'three/webgpu';
 import {
-  Fn, vec2, vec3, float, sin, cos, dot, fract, floor, mix, smoothstep, saturate, length, normalize, max, min, clamp,
+  Fn, vec2, vec3, float, sin, cos, dot, fract, floor, mix, smoothstep, saturate, length, normalize, max, min, clamp, exp,
 } from 'three/tsl';
 import { U } from '../tod.js';
 import { HOUSE, OAK, GATE, FENCE } from './layout.js';
 
-export const SWING = new THREE.Vector3(OAK.x + 4.4, 0, OAK.z + 3.0);
+export const SWING = new THREE.Vector3(OAK.x + 5.7, 0, OAK.z + 3.7);
 
 export const hash21 = /*@__PURE__*/ Fn(([p]) => {
   const q = fract(vec3(p.x, p.y, p.x).mul(vec3(0.1031, 0.1030, 0.0973)));
@@ -68,7 +68,7 @@ export const jarLight = /*@__PURE__*/ Fn(([worldPos, worldNormal, wrap]) => {
   const L = U.jarPos.sub(worldPos);
   const d = length(L);
   const nl = saturate(dot(worldNormal, L.div(d.max(0.001))).mul(float(1.0).sub(wrap)).add(wrap));
-  const atten = float(1.0).div(d.mul(d).mul(2.4).add(1.0)).mul(smoothstep(6.5, 1.5, d));
+  const atten = exp(d.mul(-1.5)).mul(smoothstep(5.0, 2.0, d));
   return U.jarCol.mul(U.jarInt).mul(atten).mul(nl);
 });
 

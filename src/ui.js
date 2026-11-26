@@ -1,5 +1,5 @@
 // DOM layer: title, HUD count, hints, pause, ending.
-export function createUI(game, { onBegin, onResume, onAgain, onMute }) {
+export function createUI(game, { onBegin, onResume, onAgain, onMute, fireflyAt, tapCatch }) {
   const $ = (id) => document.getElementById(id);
   const root = document.documentElement;
   const el = { title: $('title'), begin: $('begin'), pause: $('pause'), resume: $('resume'), end: $('end'), again: $('again'), share: $('share'),
@@ -8,9 +8,13 @@ export function createUI(game, { onBegin, onResume, onAgain, onMute }) {
 
   el.begin.addEventListener('click', () => { if (!el.begin.disabled) onBegin(); });
   el.resume.addEventListener('click', onResume);
-  el.pause.addEventListener('click', (e) => { if (e.target === el.pause) onResume(); });
+  el.pause.addEventListener('click', (e) => { if (e.target !== el.resume) onResume(); });
   el.again.addEventListener('click', onAgain);
-  el.mute.addEventListener('click', () => { const off = !el.mute.classList.contains('off'); el.mute.classList.toggle('off', off); onMute(off); });
+  el.mute.addEventListener('click', (e) => {
+    // A firefly drifting behind the button still gets caught: the tap was meant for it.
+    if (e.clientX && fireflyAt && fireflyAt(e.clientX, e.clientY)) { tapCatch(e.clientX, e.clientY); return; }
+    const off = !el.mute.classList.contains('off'); el.mute.classList.toggle('off', off); onMute(off);
+  });
   el.share.addEventListener('click', async () => {
     const url = location.href.split('?')[0];
     const data = { title: 'Firefly Jar', text: 'This reminded me of being eight. Catch fireflies in a jar, then let them go.', url };
@@ -55,6 +59,8 @@ export function createUI(game, { onBegin, onResume, onAgain, onMute }) {
       return true;
     },
     clearHint() { clearTimeout(hintTimer); el.hint.classList.remove('show'); hintUntil = 0; },
-    reticle(state) { el.reticle.className = state || ''; },
+    reticle(state) { if (el.reticle.className !== (state || '')) el.reticle.className = state || ''; },
+    // Show where the thumbstick lives for a few seconds; after that it only appears under a thumb.
+    stickHint() { const s = document.getElementById('stick'); s.classList.add('hinting'); setTimeout(() => s.classList.remove('hinting'), 7000); },
   };
 }

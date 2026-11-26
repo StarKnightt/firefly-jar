@@ -61,7 +61,7 @@ function barkMaterial(tex, { tiling = new THREE.Vector2(1, 1), tint = 0xffffff }
   const mat = new THREE.MeshStandardNodeMaterial({ roughness: 1, metalness: 0 });
   const st = uv().mul(vec2(tiling.x, tiling.y));
   const c = new THREE.Color(tint);
-  mat.colorNode = vec4(texture(tex.diff, st).rgb.mul(vec3(c.r, c.g, c.b)), 1.0);
+  mat.colorNode = vec4(texture(tex.diff, st).rgb.mul(vec3(c.r, c.g, c.b)).mul(1.7), 1.0);
   mat.roughnessNode = texture(tex.rough, st).r;
   mat.normalNode = normalMap(texture(tex.nor, st), vec2(1.1, 1.1));
   mat.emissiveNode = jarLight(positionWorld, normalWorld, float(0.25)).mul(vec3(0.2, 0.16, 0.11));
@@ -70,6 +70,7 @@ function barkMaterial(tex, { tiling = new THREE.Vector2(1, 1), tint = 0xffffff }
 
 function leafMaterial(leafTex, { tint = 0xb9c98a, sway = 3, hero = false } = {}) {
   const mat = new THREE.MeshLambertNodeMaterial({ side: THREE.DoubleSide, alphaTest: 0.42 });
+  mat.alphaToCoverage = true; // with MSAA this softens the cut-out edges of the leaf cards
   const tx = texture(leafTex, uv());
   const c = new THREE.Color(tint);
   // Card colour varies a little from spray to spray so the crown isn't one flat green.
@@ -140,7 +141,8 @@ export function createOak(assets) {
     const a = Math.atan2(fp.getZ(i), fp.getX(i));
     const y = fp.getY(i);
     const low = THREE.MathUtils.clamp(0.45 - y, 0, 1);
-    const k = 1 + low * (0.22 * Math.sin(a * 5 + 0.6) + 0.12 * Math.sin(a * 9));
+    // Buttress roots: a few strong ridges running out into the ground.
+    const k = 1 + low * (0.55 * Math.pow(Math.max(0, Math.sin(a * 3 + 0.6)), 2) + 0.3 * Math.pow(Math.max(0, Math.sin(a * 5 + 2.0)), 3) + 0.08 * Math.sin(a * 11));
     fp.setXYZ(i, fp.getX(i) * k, y, fp.getZ(i) * k);
   }
   flare.geometry.computeVertexNormals();
@@ -186,16 +188,16 @@ export function createOak(assets) {
     const twist = sin(uv().y.mul(520.0).add(uv().x.mul(6.2832))).mul(0.5).add(0.5);
     return vec4(mix(vec3(0.33, 0.25, 0.15), vec3(0.62, 0.5, 0.33), twist), 1.0);
   })();
-  const rope = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.011, ropeLen, 7, 1), ropeMat);
+  const rope = new THREE.Mesh(new THREE.CylinderGeometry(0.019, 0.019, ropeLen, 8, 1), ropeMat);
   rope.position.y = -ropeLen / 2;
   rope.castShadow = true;
   pivot.add(rope);
   // The loop tied around the top of the tire, and the knot on the limb.
-  const loop = new THREE.Mesh(new THREE.TorusGeometry(0.105, 0.012, 6, 18), ropeMat);
+  const loop = new THREE.Mesh(new THREE.TorusGeometry(0.11, 0.019, 6, 18), ropeMat);
   loop.position.y = -(ropeLen + 0.06);
   loop.rotation.y = Math.PI / 2;
   pivot.add(loop);
-  const knot = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.014, 6, 16), ropeMat);
+  const knot = new THREE.Mesh(new THREE.TorusGeometry(0.11, 0.02, 6, 16), ropeMat);
   knot.position.copy(hang).add(new THREE.Vector3(0, 0.03, 0));
   knot.rotation.set(0.3, 0.9, Math.PI / 2);
   group.add(knot);
@@ -230,7 +232,7 @@ export function createFarTrees(assets, tier) {
   const spots = variants.map(() => []);
   const count = Math.round(170 * tier.trees);
   const sunAz = Math.atan2(0.30, -1.0);
-  for (let i = 0; i < count * 6 && spots.reduce((s, a) => s + a.length, 0) < count; i++) {
+  for (let i = 0; i < count * 14 && spots.reduce((s, a) => s + a.length, 0) < count; i++) {
     const a = rnd() * Math.PI * 2;
     const ring = rnd();
     const r = ring < 0.22 ? 62 + rnd() * 40 : 105 + Math.pow(rnd(), 0.7) * 190;
@@ -240,8 +242,10 @@ export function createFarTrees(assets, tier) {
     if (Math.hypot(x - HOUSE.x, z - HOUSE.z) < 15) continue;
     let dAz = Math.abs(Math.atan2(z, x) - sunAz); if (dAz > Math.PI) dAz = Math.PI * 2 - dAz;
     if (dAz < 0.2 && r < 230 && rnd() < 0.85) continue;
+    const grove = Math.sin(x * 0.045 + 1.3) * Math.cos(z * 0.052 - 0.6) + 0.55 * Math.sin(x * 0.11 - z * 0.09);
+    if (grove < -0.15 + rnd() * 0.5) continue;
     const v = Math.floor(rnd() * variants.length);
-    spots[v].push({ x, z, s: 0.8 + rnd() * 0.75, yaw: rnd() * Math.PI * 2 });
+    spots[v].push({ x, z, s: 0.55 + Math.pow(rnd(), 1.4) * 1.25, yaw: rnd() * Math.PI * 2 });
   }
   // Two shade trees beside the farmhouse.
   spots[0].push({ x: HOUSE.x - 11.5, z: HOUSE.z - 2, s: 1.15, yaw: 1.0 });

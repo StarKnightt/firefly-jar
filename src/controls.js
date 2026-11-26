@@ -1,7 +1,7 @@
 // Input: WASD + mouse look on desktop, a floating thumbstick + drag to look on touch.
 // Both produce the same three things: a move vector, look deltas, and catch attempts.
 import * as THREE from 'three/webgpu';
-import { FENCE, heightAt } from './world/layout.js';
+import { FENCE, GATE, HOUSE, heightAt } from './world/layout.js';
 
 const WALK = 2.15, RUN = 3.4; // metres per second for short legs
 
@@ -98,7 +98,8 @@ export function createControls(game, { onCatch, onLockChange }) {
     const dx = e.clientX - t.x, dy = e.clientY - t.y;
     t.x = e.clientX; t.y = e.clientY;
     t.moved = Math.max(t.moved, Math.hypot(t.x - t.x0, t.y - t.y0));
-    if (t.role === 'look') look(dx, dy, 0.0052 * (680 / Math.max(480, Math.min(window.innerWidth, window.innerHeight) * 1.4)) + 0.0016);
+    // A swipe across the screen turns you about the same amount whichever way the phone is held.
+    if (t.role === 'look') look(dx, dy, 3.4 / Math.max(520, window.innerWidth));
     else if (t.role === 'stick' && t.moved > 9) {
       if (!t.shown) { t.shown = true; setStick(t.x0, t.y0, true); }
       let sx = t.x - t.x0, sy = t.y - t.y0;
@@ -128,7 +129,7 @@ export function createControls(game, { onCatch, onLockChange }) {
 
   const vel = new THREE.Vector3(), wish = new THREE.Vector3();
   const api = {
-    state, requestLock, keys, colliders: [],
+    state, requestLock, keys, colliders: [], side: 'meadow',
     autopilot: null, // { x, y, run } set by the trailer director
     enable(on) { state.enabled = on; if (!on) { keys.clear(); touches.clear(); stickId = lookId = null; setStick(0, 0, false); } },
     exitLock() { if (document.pointerLockElement) document.exitPointerLock(); },
@@ -143,7 +144,7 @@ export function createControls(game, { onCatch, onLockChange }) {
         if (keys.has('KeyA') || keys.has('ArrowLeft')) move.x -= 1;
         run = keys.has('ShiftLeft') || keys.has('ShiftRight');
         const st = stickId !== null ? touches.get(stickId) : null;
-        if (st && st.vx !== undefined) { move.x += st.vx; move.y += st.vy; run = Math.hypot(st.vx, st.vy) > 0.92; }
+        if (st && st.vx !== undefined) { move.x += st.vx; move.y += st.vy; }
       }
       if (api.autopilot) { move.set(api.autopilot.x, api.autopilot.y); run = !!api.autopilot.run; }
       const len = move.length();
@@ -157,9 +158,20 @@ export function createControls(game, { onCatch, onLockChange }) {
       p.pos.x += vel.x * dt; p.pos.z += vel.z * dt;
 
       // The fence keeps you in the pasture; the oak and the swing are solid.
-      const m = 0.75;
-      p.pos.x = THREE.MathUtils.clamp(p.pos.x, FENCE.minX + m, FENCE.maxX - m);
-      p.pos.z = THREE.MathUtils.clamp(p.pos.z, FENCE.minZ + m, FENCE.maxZ - m);
+      // The fence keeps you in the pasture, except through the open gate, where the path
+      // leads across the yard to the foot of the porch steps.
+      const m = 0.75, fz = FENCE.minZ, half = GATE.width / 2 - 0.5;
+      const inGate = Math.abs(p.pos.x - GATE.x) < half;
+      if (p.pos.z > fz + m) api.side = 'meadow'; else if (p.pos.z < fz - m) api.side = 'yard';
+      else if (!inGate) p.pos.z = api.side === 'yard' ? fz - m : fz + m;
+      else p.pos.x = THREE.MathUtils.clamp(p.pos.x, GATE.x - half, GATE.x + half);
+      if (api.side === 'yard' && p.pos.z < fz - m) {
+        p.pos.x = THREE.MathUtils.clamp(p.pos.x, HOUSE.x - 13, HOUSE.x + 15);
+        p.pos.z = Math.max(p.pos.z, HOUSE.z + 7.7);
+      } else {
+        p.pos.x = THREE.MathUtils.clamp(p.pos.x, FENCE.minX + m, FENCE.maxX - m);
+        p.pos.z = Math.min(p.pos.z, FENCE.maxZ - m);
+      }
       for (const c of api.colliders) {
         const dx = p.pos.x - c.x, dz = p.pos.z - c.z, d = Math.hypot(dx, dz), r = c.r + 0.3;
         if (d < r && d > 0.0001) { p.pos.x = c.x + dx / d * r; p.pos.z = c.z + dz / d * r; }

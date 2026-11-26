@@ -17,12 +17,13 @@ function boardMaterial(tex, { along = 'x' } = {}) {
   // Box UVs: u runs along the long side of every face we care about.
   const st = along === 'x'
     ? vec2(uv().y.mul(0.16).add(r.mul(0.8)), uv().x.mul(1.1).add(r2))
-    : vec2(uv().x.mul(0.16).add(r.mul(0.8)), uv().y.mul(0.9).add(r2));
+    : vec2(uv().x.mul(0.14).add(r.mul(0.8)), uv().y.mul(0.55).add(r2));
   const c = texture(tex.diff, st).rgb;
   const grey = mix(vec3(0.62, 0.59, 0.54), vec3(0.47, 0.42, 0.36), r2);
   mat.colorNode = vec4(c.mul(2.1).mul(grey).add(vec3(0.03, 0.035, 0.02).mul(r)), 1.0);
   mat.roughnessNode = texture(tex.rough, st).r.mul(0.5).add(0.5);
-  mat.emissiveNode = jarLight(positionWorld, normalWorld, float(0.3)).mul(vec3(0.3, 0.27, 0.22));
+  // Lit by the jar the wood keeps its grain rather than turning into a glowing slab.
+  mat.emissiveNode = jarLight(positionWorld, normalWorld, float(0.3)).min(vec3(0.9)).mul(c.mul(2.1).mul(grey)).mul(0.8);
   return mat;
 }
 
@@ -105,7 +106,7 @@ export function createFence(assets) {
   add(0.1, 1.05, 0.03, 0.05, 0.62); add(0.1, 1.05, 0.03, gw - 0.05, 0.62);
   add(Math.hypot(gw, 0.8), 0.1, 0.024, gw / 2, 0.66, Math.atan2(0.8, gw));
   gate.position.set(GATE.x - GATE.width / 2 + 0.1, heightAt(GATE.x, GATE.z), GATE.z);
-  gate.rotation.y = 1.15;
+  gate.rotation.y = 1.5;
   group.add(gate);
 
   return group;
@@ -115,7 +116,9 @@ export function createFence(assets) {
 export function createPowerLine() {
   const group = new THREE.Group();
   group.name = 'powerline';
-  const mat = new THREE.MeshStandardNodeMaterial({ roughness: 1, color: 0x3a2f27 });
+  // Far enough away to be shapes against the sky: unlit, so no lamp ever makes them glow.
+  const mat = new THREE.MeshBasicNodeMaterial();
+  mat.colorNode = vec4(U.ambient.mul(0.06).add(vec3(0.006, 0.005, 0.005)), 1.0);
   const roadZ = HOUSE.z - 22;
   const poles = [];
   for (let i = 0; i < 9; i++) poles.push({ x: -150 + i * 38, z: roadZ - Math.sin(i * 0.7) * 2.5 });
@@ -163,7 +166,8 @@ export function createTown() {
   group.name = 'town';
   let seed = 777;
   const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
-  const dark = new THREE.MeshLambertNodeMaterial({ color: 0x4a4650 });
+  const dark = new THREE.MeshBasicNodeMaterial();
+  dark.colorNode = vec4(U.ambient.mul(0.085).add(vec3(0.008, 0.008, 0.012)), 1.0);
   const boxes = [], lights = [];
   const dummy = new THREE.Object3D();
   const cx = 150, cz = -250; // north-east, past the house

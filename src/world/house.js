@@ -259,7 +259,13 @@ export function createHouse(assets) {
     const warm = mix(vec3(1.0, 0.72, 0.36), vec3(1.0, 0.56, 0.2), lit.y);
     const room = warm.mul(curtain.mul(fold).mul(0.75).add(lamp.mul(0.9))).mul(mix(1.0, 0.6, st.y));
     const flicker = sin(U.time.mul(0.7).add(lit.z)).mul(0.03).add(1.0);
-    return room.mul(glowAmt).mul(flicker).mul(2.3);
+    // Not every room is the same: some have the curtains drawn, some are dimmer, one has a television.
+    const kind = fract(lit.z.mul(0.37));
+    const drawn = smoothstep(0.55, 0.6, kind);
+    const closed = warm.mul(fold.mul(0.5).add(0.12)).mul(mix(0.9, 0.55, st.y));
+    const tv = smoothstep(0.9, 0.95, kind).mul(sin(U.time.mul(5.3).add(lit.z)).mul(0.5).add(0.5)).mul(0.25);
+    const out = mix(room, closed, drawn).add(vec3(0.35, 0.5, 0.9).mul(tv));
+    return out.mul(glowAmt).mul(flicker).mul(mix(1.25, 0.7, fract(lit.z.mul(0.71))));
   })();
   mats.glass = glass;
 
@@ -279,11 +285,20 @@ export function createHouse(assets) {
   group.add(fixture);
   const bulbMat = new THREE.MeshBasicNodeMaterial();
   const bulbOn = smoothstep(0.1, 0.3, U.tod);
-  bulbMat.colorNode = vec3(1.0, 0.74, 0.4).mul(bulbOn.mul(9.0).add(0.3));
-  const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.055, 12, 8), bulbMat);
+  bulbMat.colorNode = vec3(1.0, 0.72, 0.38).mul(bulbOn.mul(3.4).add(0.3));
+  const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.036, 12, 8), bulbMat);
   bulb.position.copy(lampPos);
   group.add(bulb);
-  const porchLight = new THREE.PointLight(0xffb469, 0, 22, 1.8);
+  const porchLight = new THREE.PointLight(0xffb469, 0, 30, 1.7);
+  // Posts, rails and the chair throw their shadows out across the lawn. Everything that casts
+  // here stands still, so the shadow is drawn once rather than six cube faces every frame.
+  if (assets.tier.name !== 'low') {
+    porchLight.castShadow = true;
+    porchLight.shadow.mapSize.set(1024, 1024);
+    porchLight.shadow.camera.near = 0.08; porchLight.shadow.camera.far = 30;
+    porchLight.shadow.bias = -0.002; porchLight.shadow.normalBias = 0.03;
+    porchLight.shadow.autoUpdate = false; porchLight.shadow.needsUpdate = true;
+  }
   porchLight.position.copy(lampPos).add(new THREE.Vector3(0, -0.05, 0.25));
   group.add(porchLight);
 
@@ -302,7 +317,7 @@ export function createHouse(assets) {
 
   const worldLamp = new THREE.Vector3();
   const update = (time, tod) => {
-    porchLight.intensity = THREE.MathUtils.smoothstep(tod, 0.1, 0.32) * 26 * (1 + Math.sin(time * 9.0) * 0.008);
+    porchLight.intensity = THREE.MathUtils.smoothstep(tod, 0.1, 0.32) * 30 * (1 + Math.sin(time * 9.0) * 0.008);
     // Someone just got up: the chair is still rocking, slower and slower, then again in a while.
     const cyc = (time % 46) / 46;
     chairPivot.rotation.x = Math.sin(time * 2.1) * 0.07 * Math.max(0, 1 - cyc * 2.2);

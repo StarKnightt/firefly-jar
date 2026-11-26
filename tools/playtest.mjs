@@ -14,7 +14,7 @@ const b = await launch({ width: w, height: h, mobile, dpr: mobile ? 2 : 1, built
 await b.open(['det', 'debug', 'nolock', opt('q') ? 'q=' + opt('q') : ''].filter(Boolean).join('&'));
 const page = b.page;
 await page.exposeFunction('__shot', async (name) => {
-  await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+  await page.evaluate(() => window.__ffj.settle());
   await page.screenshot({ path: path.join(out, name + '.png') });
 });
 
@@ -35,8 +35,8 @@ const result = await page.evaluate(async () => {
       p.yaw += Math.max(-0.05, Math.min(0.05, wrap(wantYaw - p.yaw)));
       p.pitch += Math.max(-0.04, Math.min(0.04, wantPitch - p.pitch));
       const aimed = Math.abs(wrap(wantYaw - p.yaw)) < 0.05 && Math.abs(wantPitch - p.pitch) < 0.05;
-      g.controls.autopilot = { x: 0, y: flat > 2.2 ? 1 : 0, run: false };
-      if (aimed && flat < g.fireflies.reach - 0.6 && g.frame % 20 === 0) {
+      g.controls.autopilot = { x: 0, y: flat > g.fireflies.reach - 1.0 ? 1 : 0, run: false };
+      if (aimed && flat < g.fireflies.reach - 0.4 && g.frame % 20 === 0) {
         const r = g.flow.tryCatch(0, 0, false);
         if (r === 'caught') { log.catches.push({ t: +g.time.toFixed(1), tod: +g.tod.value.toFixed(2) }); target = null; }
         else if (r === 'far') log.far++; else log.misses++;
@@ -53,11 +53,12 @@ const result = await page.evaluate(async () => {
   log.phaseAfterPlay = g.phase;
   // Watch the ending.
   let n = 0;
-  while (g.phase !== 'done' && n++ < 60 * 30) {
+  while (g.phase !== 'done' && n++ < 60 * 45) {
     g.step(dt);
-    if (n === 60 * 3) await window.__shot('04-ending-open');
-    if (n === 60 * 7) await window.__shot('05-ending-rising');
-    if (n === 60 * 12) await window.__shot('06-ending-stars');
+    if (n === 60 * 4) await window.__shot('04-ending-open');
+    if (n === 60 * 9) await window.__shot('05-ending-swarm');
+    if (n === 60 * 15) await window.__shot('05b-ending-rising');
+    if (n === 60 * 23) await window.__shot('06-ending-stars');
   }
   for (let i = 0; i < 90; i++) g.step(dt);
   await new Promise((r) => setTimeout(r, 3000));

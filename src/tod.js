@@ -6,24 +6,24 @@ const C = (hex) => new THREE.Color(hex);
 
 // Every key is authored by eye against reference photos of Midwest summer dusk.
 const KEYS = [
-  { t: 0.00, sunElev: 8.5, sunCol: C(0xffb061), sunInt: 3.4, zenith: C(0x3f73bd), horizon: C(0xf7cd92), mid: C(0xcfd6c4), glow: C(0xffa64d), glowAmt: 1.00,
-    hemiSky: C(0xa9bfe6), hemiGnd: C(0x7a6238), hemiInt: 0.95, fog: C(0xe9c49a), fogDen: 0.0030, stars: 0.0, moon: 0.0, exposure: 1.00, cloudLit: C(0xffd9a0), cloudDark: C(0xb98f7a), trans: 1.0 },
-  { t: 0.16, sunElev: 4.5, sunCol: C(0xff9a4a), sunInt: 3.0, zenith: C(0x3a66ad), horizon: C(0xf8b877), mid: C(0xd9c9a8), glow: C(0xff8f40), glowAmt: 1.15,
-    hemiSky: C(0xa3b4dd), hemiGnd: C(0x7a5a36), hemiInt: 0.85, fog: C(0xeab384), fogDen: 0.0034, stars: 0.0, moon: 0.0, exposure: 1.02, cloudLit: C(0xffc184), cloudDark: C(0xa67c78), trans: 1.0 },
-  { t: 0.32, sunElev: 0.4, sunCol: C(0xff6f34), sunInt: 1.9, zenith: C(0x33549b), horizon: C(0xf59a62), mid: C(0xd8a98e), glow: C(0xff6a35), glowAmt: 1.25,
-    hemiSky: C(0x93a0d2), hemiGnd: C(0x6d4f3a), hemiInt: 0.74, fog: C(0xdd9274), fogDen: 0.0040, stars: 0.02, moon: 0.0, exposure: 1.06, cloudLit: C(0xff8f66), cloudDark: C(0x7c6282), trans: 0.8 },
-  { t: 0.46, sunElev: -4.0, sunCol: C(0xff5a30), sunInt: 0.0, zenith: C(0x263f85), horizon: C(0xdb7f78), mid: C(0xa9789e), glow: C(0xf2683f), glowAmt: 1.00,
-    hemiSky: C(0x7c88c8), hemiGnd: C(0x54465a), hemiInt: 0.62, fog: C(0xa0789a), fogDen: 0.0050, stars: 0.14, moon: 0.0, exposure: 1.12, cloudLit: C(0xf07a78), cloudDark: C(0x4c4a7c), trans: 0.25 },
-  { t: 0.62, sunElev: -9.0, sunCol: C(0xff5a30), sunInt: 0.0, zenith: C(0x18295f), horizon: C(0x8f6a9a), mid: C(0x5d5a9a), glow: C(0xc45a58), glowAmt: 0.60,
-    hemiSky: C(0x5f6fb6), hemiGnd: C(0x383a5c), hemiInt: 0.52, fog: C(0x5d5e94), fogDen: 0.0052, stars: 0.45, moon: 0.45, exposure: 1.20, cloudLit: C(0x8c6a9c), cloudDark: C(0x2b3160), trans: 0.0 },
-  { t: 0.80, sunElev: -14.0, sunCol: C(0xff5a30), sunInt: 0.0, zenith: C(0x0e1b47), horizon: C(0x41508f), mid: C(0x263a78), glow: C(0x6a5a92), glowAmt: 0.30,
-    hemiSky: C(0x4b5fae), hemiGnd: C(0x262d52), hemiInt: 0.46, fog: C(0x2f3d73), fogDen: 0.0052, stars: 0.85, moon: 0.80, exposure: 1.28, cloudLit: C(0x4d5a96), cloudDark: C(0x18214a), trans: 0.0 },
-  { t: 1.00, sunElev: -18.0, sunCol: C(0xff5a30), sunInt: 0.0, zenith: C(0x0a1438), horizon: C(0x2c3c78), mid: C(0x17255a), glow: C(0x44508a), glowAmt: 0.20,
-    hemiSky: C(0x4458a8), hemiGnd: C(0x1f2648), hemiInt: 0.44, fog: C(0x243262), fogDen: 0.0050, stars: 1.0, moon: 1.0, exposure: 1.32, cloudLit: C(0x3c4a86), cloudDark: C(0x121a40), trans: 0.0 },
+  { t: 0.00, sunElev: 6.5, sunCol: C(0xffa552), sunInt: 3.7, zenith: C(0x3566b8), horizon: C(0xffb565), mid: C(0xdcc9a0), glow: C(0xff9a42), glowAmt: 1.00,
+    hemiSky: C(0xa9bfe6), hemiGnd: C(0x7a6238), hemiInt: 0.80, fog: C(0xf0bb85), fogDen: 0.0030, stars: 0.0, moon: 0.0, exposure: 1.00, cloudLit: C(0xffcf8f), cloudDark: C(0xb08a78), trans: 1.0 },
+  { t: 0.18, sunElev: 3.3, sunCol: C(0xff8c3d), sunInt: 3.3, zenith: C(0x315aa2), horizon: C(0xff9c52), mid: C(0xdcb590), glow: C(0xff8338), glowAmt: 1.15,
+    hemiSky: C(0xa0b0dc), hemiGnd: C(0x775636), hemiInt: 0.72, fog: C(0xeea673), fogDen: 0.0034, stars: 0.0, moon: 0.0, exposure: 1.02, cloudLit: C(0xffb777), cloudDark: C(0xa07676), trans: 1.0 },
+  { t: 0.34, sunElev: 0.3, sunCol: C(0xff6a30), sunInt: 1.7, zenith: C(0x2a4686), horizon: C(0xf48a50), mid: C(0xc69888), glow: C(0xff6431), glowAmt: 1.20,
+    hemiSky: C(0x8d98c8), hemiGnd: C(0x66493a), hemiInt: 0.58, fog: C(0xd38a6c), fogDen: 0.0040, stars: 0.02, moon: 0.0, exposure: 1.06, cloudLit: C(0xf58a62), cloudDark: C(0x6f5c78), trans: 0.8 },
+  { t: 0.48, sunElev: -4.0, sunCol: C(0xff5a30), sunInt: 0.0, zenith: C(0x1c2f60), horizon: C(0xc0705a), mid: C(0x6b6788), glow: C(0xe0683e), glowAmt: 0.85,
+    hemiSky: C(0x6a78b0), hemiGnd: C(0x40384a), hemiInt: 0.40, fog: C(0x6c627e), fogDen: 0.0046, stars: 0.14, moon: 0.0, exposure: 1.10, cloudLit: C(0xb3706c), cloudDark: C(0x35365c), trans: 0.25 },
+  { t: 0.64, sunElev: -9.0, sunCol: C(0xff5a30), sunInt: 0.0, zenith: C(0x0f1b40), horizon: C(0x4d4c76), mid: C(0x2a3660), glow: C(0x9a5650), glowAmt: 0.45,
+    hemiSky: C(0x4c5c9e), hemiGnd: C(0x23263c), hemiInt: 0.25, fog: C(0x30385e), fogDen: 0.0048, stars: 0.5, moon: 0.4, exposure: 1.10, cloudLit: C(0x4a4a72), cloudDark: C(0x171c38), trans: 0.0 },
+  { t: 0.82, sunElev: -14.0, sunCol: C(0xff5a30), sunInt: 0.0, zenith: C(0x070d24), horizon: C(0x1b2548), mid: C(0x101938), glow: C(0x3a3a60), glowAmt: 0.22,
+    hemiSky: C(0x3a4a8a), hemiGnd: C(0x141a30), hemiInt: 0.15, fog: C(0x151c38), fogDen: 0.0046, stars: 0.9, moon: 0.8, exposure: 1.05, cloudLit: C(0x1e2748), cloudDark: C(0x0a0f24), trans: 0.0 },
+  { t: 1.00, sunElev: -18.0, sunCol: C(0xff5a30), sunInt: 0.0, zenith: C(0x050a1c), horizon: C(0x141c3c), mid: C(0x0b1230), glow: C(0x2a2e52), glowAmt: 0.15,
+    hemiSky: C(0x34447f), hemiGnd: C(0x10152a), hemiInt: 0.125, fog: C(0x10162e), fogDen: 0.0044, stars: 1.0, moon: 1.0, exposure: 1.05, cloudLit: C(0x1a2244), cloudDark: C(0x080c1e), trans: 0.0 },
 ];
 
 export const SUN_AZ = Math.atan2(0.30, -1.0); // direction the sun sits in, xz plane (west, a touch south)
-export const MOON_DIR = new THREE.Vector3(0.52, 0.62, 0.58).normalize();
+export const MOON_DIR = new THREE.Vector3(0.62, 0.50, 0.60).normalize();
 export const MOON_COL = new THREE.Color(0x9fb6ff);
 
 // Uniforms shared by every material in the world.
@@ -51,7 +51,7 @@ export const U = {
   time: uniform(0),
   camPos: uniform(new THREE.Vector3()),
   jarPos: uniform(new THREE.Vector3(0, 1, 0)),
-  jarCol: uniform(new THREE.Color(0xffd27a)),
+  jarCol: uniform(new THREE.Color(0xffbf55)),
   jarInt: uniform(0),
 };
 
@@ -102,7 +102,7 @@ export class TimeOfDay {
 
     // One shadow-casting key light: the sun until it sets, then the moon.
     // They swap while both are at zero so the change is never visible.
-    const moonInt = 0.62 * s.moon;
+    const moonInt = 0.30 * s.moon;
     if (s.sunInt > 0.001) {
       U.lightDir.value.copy(this.sunDir);
       U.lightCol.value.copy(s.sunCol).multiplyScalar(s.sunInt);

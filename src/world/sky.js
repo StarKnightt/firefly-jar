@@ -44,17 +44,17 @@ export function createSky() {
     // Sun: wide warm scatter, tight corona, disc.
     const sd = saturate(dot(dir, U.sunDir));
     const sunUp = smoothstep(-0.11, 0.02, U.sunDir.y);
-    const scatter = pow(sd, 9.0).mul(0.30).add(pow(sd, 120.0).mul(0.75));
+    const scatter = pow(sd, 7.0).mul(0.22).add(pow(sd, 60.0).mul(0.45)).add(pow(sd, 700.0).mul(1.4));
     col.addAssign(U.sunCol.mul(scatter).mul(U.glowAmt).mul(mix(0.35, 1.0, sunUp)));
-    const disc = smoothstep(0.99986, 0.99995, sd).mul(smoothstep(-0.012, 0.01, h));
-    col.addAssign(U.sunCol.mul(disc).mul(14.0).mul(U.sunInt.min(1.0)));
+    const disc = smoothstep(0.99990, 0.99996, sd).mul(smoothstep(-0.012, 0.01, h));
+    col.addAssign(mix(U.sunCol, vec3(1.0, 0.86, 0.6), 0.45).mul(disc).mul(22.0).mul(U.sunInt.min(1.0)));
 
     // Afterglow band hugging the horizon where the sun went down.
     const flat = normalize(vec3(dir.x, 0.0, dir.z));
     const sunFlat = normalize(vec3(U.sunDir.x, 0.0, U.sunDir.z));
     const az = saturate(dot(flat, sunFlat).mul(0.5).add(0.5));
-    const band = exp(abs(h).mul(-7.0)).mul(pow(az, 2.5));
-    col.addAssign(U.glow.mul(band).mul(0.55).mul(U.glowAmt));
+    const band = exp(abs(h).mul(-11.0)).mul(pow(az, 2.2));
+    col.addAssign(U.glow.mul(band).mul(0.8).mul(U.glowAmt));
 
     // Clouds: stretched cirrus on a plane high above, lit from the sun side.
     const plane = dir.xz.div(h.add(0.16));
@@ -66,33 +66,35 @@ export function createSky() {
     const cloudFade = smoothstep(0.015, 0.2, h).mul(smoothstep(1.0, 0.55, h));
     const lit = pow(saturate(dot(dir, U.sunDir).mul(0.5).add(0.5)), 2.0);
     const cloudCol = mix(U.cloudDark, U.cloudLit, lit.mul(0.85).add(n.mul(0.25)));
-    const cloudA = cover.mul(cloudFade).mul(0.82);
+    const cloudA = cover.mul(cloudFade).mul(mix(0.78, 0.22, smoothstep(0.5, 0.85, U.tod)));
     col.assign(mix(col, cloudCol, cloudA));
 
     // Stars: jittered points in a 3D grid on the unit sphere, each with its own twinkle.
     const starVis = U.stars.add(U.starBoost).mul(smoothstep(0.0, 0.22, h)).mul(float(1.0).sub(cloudA));
-    const sp = dir.mul(210.0);
+    const sp = dir.mul(260.0);
     const cell = floor(sp);
     const rnd = hash3(cell);
     const rnd2 = hash3(cell.add(19.7));
     const off = vec3(rnd2, hash3(cell.add(4.1)), hash3(cell.add(9.3))).sub(0.5).mul(0.55);
     const d = length(fract(sp).sub(0.5).sub(off));
-    const size = mix(0.06, 0.14, rnd2.mul(rnd2));
+    const size = mix(0.055, 0.15, pow(rnd2, 4.0));
     const twinkle = sin(U.time.mul(mix(1.5, 4.5, rnd2)).add(rnd.mul(40.0))).mul(0.28).add(0.78);
-    const star = smoothstep(size, 0.0, d).mul(smoothstep(0.84, 0.845, rnd)).mul(twinkle);
+    const star = smoothstep(size, 0.0, d).mul(smoothstep(0.70, 0.705, rnd)).mul(twinkle);
     const starCol = mix(vec3(1.0, 0.86, 0.70), vec3(0.74, 0.86, 1.0), rnd2);
-    col.addAssign(starCol.mul(star).mul(starVis).mul(mix(1.6, 7.0, rnd2.mul(rnd2))));
+    col.addAssign(starCol.mul(star).mul(starVis).mul(mix(0.5, 9.0, pow(rnd2, 5.0))));
     // A faint milky band so the night sky has structure, not just dots.
     const mw = mx_noise_float(dir.mul(3.2).add(11.0)).mul(0.5).add(0.5);
     const bandAxis = normalize(vec3(0.35, 0.5, -0.8));
-    const mwBand = exp(pow(dot(dir, bandAxis), 2.0).mul(-9.0));
-    col.addAssign(vec3(0.20, 0.25, 0.42).mul(mwBand).mul(mw).mul(starVis).mul(0.42));
+    const mwBand = exp(pow(dot(dir, bandAxis), 2.0).mul(-34.0));
+    col.addAssign(vec3(0.16, 0.19, 0.30).mul(mwBand).mul(mw.mul(mw)).mul(starVis).mul(0.16).mul(hash3(floor(dir.mul(420.0))).mul(0.9).add(0.55)));
 
     // Moon: small soft disc with a wide halo.
     const md = saturate(dot(dir, moonDir));
-    const moonDisc = smoothstep(0.99966, 0.99984, md);
-    const moonHalo = pow(md, 900.0).mul(0.5).add(pow(md, 60.0).mul(0.10));
-    col.addAssign(vec3(0.82, 0.88, 1.0).mul(moonDisc.mul(3.4).add(moonHalo)).mul(U.moon).mul(float(1.0).sub(cloudA.mul(0.6))));
+    const moonDisc = smoothstep(0.99972, 0.99980, md);
+    const maria = mx_noise_float(dir.sub(moonDir).mul(95.0).add(3.0)).mul(0.5).add(0.5);
+    const face = mix(0.55, 1.0, smoothstep(0.35, 0.65, maria)).mul(mix(0.75, 1.0, smoothstep(0.99972, 0.99990, md)));
+    const moonHalo = pow(md, 6000.0).mul(0.35).add(pow(md, 500.0).mul(0.06));
+    col.addAssign(vec3(0.86, 0.9, 1.0).mul(moonDisc.mul(face).mul(2.2).add(moonHalo)).mul(U.moon).mul(float(1.0).sub(cloudA.mul(0.6))));
 
     return col;
   })();

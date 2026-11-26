@@ -26,7 +26,7 @@ for (const v of views) {
   const shot = async (name, settle = 1300) => {
     // UI fades run on real time; give them a moment, then let two frames present.
     await page.waitForTimeout(settle);
-    await page.evaluate(() => { window.__ffj.step(1 / 60); return new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))); });
+    await page.evaluate(() => { window.__ffj.step(1 / 60); return window.__ffj.settle(); });
     await page.screenshot({ path: path.join(out, `${v.tag}-${name}.png`) });
     console.log('shot', `${v.tag}-${name}.png`);
   };
@@ -79,6 +79,12 @@ for (const v of views) {
   await page.evaluate(async () => { const g = window.__ffj; await g.debugState({ x: -19, z: -19, yaw: 0.25, pitch: 0.03 }); });
   await steps(40);
   await shot('08-farmhouse', 300);
+  // Through the open gate and up the path to the porch steps.
+  await page.evaluate(async () => { const g = window.__ffj; await g.debugState({ x: -22.6, z: -34.2, yaw: 0.2, pitch: 0.12 }); });
+  await steps(40);
+  await shot('08b-at-the-porch-steps', 300);
+  await page.evaluate(async () => { const g = window.__ffj; await g.debugState({ x: -19, z: -19, yaw: 0.25, pitch: 0.03 }); });
+  await steps(10);
   await page.evaluate(async () => { const g = window.__ffj; await g.debugState({ pitch: -0.62 }); });
   await steps(30);
   await shot('09-look-down-at-hands', 300);
@@ -100,16 +106,18 @@ for (const v of views) {
   await steps(50);
   await shot('14-nineteen-night', 600);
   const t20 = await playTo(20);
-  await steps(60 * 2.6);
-  await shot('15-ending-jar-lifted', 100);
+  await steps(60 * 3.4);
+  await shot('15-ending-hand-on-lid', 100);
   await steps(60 * 2.4);
-  await shot('16-ending-leaving', 100);
-  await steps(60 * 3.5);
-  await shot('17-ending-rising', 100);
-  await steps(60 * 4.5);
-  await shot('18-ending-stars', 100);
+  await shot('16-ending-lid-off', 100);
+  await steps(60 * 4.2);
+  await shot('17-ending-leaving', 100);
+  await steps(60 * 6);
+  await shot('18-ending-rising', 100);
+  await steps(60 * 8);
+  await shot('19-ending-constellation', 100);
   await steps(60 * 3);
-  await shot('19-end-card', 3200);
+  await shot('20-end-card', 3200);
   console.log(`[pace ${v.tag}] bot seconds to reach 5/10/15/19/20:`, t5, t10, t15, t19, t20);
   await b.check();
   await b.teardown(null);
